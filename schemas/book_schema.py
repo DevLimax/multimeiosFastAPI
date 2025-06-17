@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Field
 from pydantic import BaseModel, EmailStr
 
 class BookSchemaBase(BaseModel):
@@ -22,7 +22,7 @@ class BookSchemaUpdate(BookSchemaBase):
     cover: Optional[str] = None
     genre: Optional[int] = None
     genre_two: Optional[int] = None
-    quantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=0)
 
 class BookSchemaReviews(BookSchemaBase):
     reviews: Optional[List[int]] = None

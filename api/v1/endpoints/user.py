@@ -64,7 +64,7 @@ async def get_users(db: AsyncSession = Depends(get_session)):
     async with db as session:
         query = select(UserModel).order_by(UserModel.id)
         result = await session.execute(query)
-        users: List[UserModel] = result.scalars().unique().all()
+        users: List[UserModel] = result.scalars().all()
         return users
     
 #GET User By ID
@@ -73,7 +73,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_session)):
     async with db as session:
         query = select(UserModel).filter(UserModel.id == user_id)
         result = await session.execute(query)
-        user: UserSchemaBase = result.scalars().unique().one_or_none()
+        user = result.scalars().unique().one_or_none()
 
         if not user:
             raise HTTPException(detail="Usúario não encontrado", 

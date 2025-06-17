@@ -23,6 +23,11 @@ class BookLoanModel(settings.DBBASEMODEL):
     status = Column(EnumSQL(Status), default=Status.awaiting_withdrawal)
     loan_date = Column(DateTime, default=datetime.now())
     return_date = Column(DateTime, default=datetime.now() + timedelta(days=25))
+    user_details = relationship(
+        "UserModel",
+        back_populates="loans",
+        lazy="joined"
+    )
 
 
 

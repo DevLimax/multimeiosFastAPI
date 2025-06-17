@@ -13,3 +13,9 @@ class UserModel(settings.DBBASEMODEL):
     password = Column(String(256), index=True, nullable=False)
     is_admin = Column(Boolean, default=False)
     profile_image = Column(String(255), default="static/images/defaultProfile.png")
+    loans = relationship(
+        "BookLoanModel",
+        cascade="all, delete-orphan",
+        back_populates="user",
+        lazy="joined"
+    )
