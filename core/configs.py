@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     """
 
     API_V1_STR: str = "/api/v1"
-    DB_URL: str = "postgresql+asyncpg://lima:postgres@localhost:5432/multimeios"
+    DB_URL: str = "postgresql+asyncpg://admin:postgres@localhost:5432/multimeios"
     DBBASEMODEL: ClassVar = declarative_base()
 
     JWT_SECRET: str = "SfpbxcK60Gjlnw4oIX3eO9gNTzdd3w1_1NS5gWqkfKg"

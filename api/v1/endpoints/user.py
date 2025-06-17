@@ -101,7 +101,7 @@ async def put_user(user_id: int,
         
         elif current_user.is_admin or user_up.id == current_user.id:
             if user.first_name:
-                user_up. first_name == user.first_name
+                user_up.first_name == user.first_name
             if user.last_name:
                 user_up.last_name == user.last_name
             if user.enrrolment:
@@ -120,7 +120,30 @@ async def put_user(user_id: int,
         await session.refresh()
         return user_up
     
+#DELETE User
+router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: int ,
+                      db: AsyncSession = Depends(get_session),
+                      current_user: UserModel = Depends(get_current_user)
+):
+    async with db as session:
+        query = select(UserModel).filter(UserModel.id == user_id)
+        result = await session.execute(query)
+        user = result.scalars().unique().one_or_none()   
+    
+    if not user:
+        raise HTTPException(detail="Usúario não encontrado", 
+            status_code=status.HTTP_404_NOT_FOUND)
 
-            
+    if not current_user.is_admin and user.id != current_user.id:
+        raise HTTPException(detail="Usuário não tem permissão para excluir outro usuario",
+                            status_code=status.HTTP_401_UNAUTHORIZED)
+    
+    elif current_user.is_admin or user.id == current_user.id:
+        async with db as session:
+            await session.delete(user)
+            await session.commit()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        
 
 

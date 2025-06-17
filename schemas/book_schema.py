@@ -24,5 +24,12 @@ class BookSchemaUpdate(BookSchemaBase):
     genre_two: Optional[int] = None
     quantity: Optional[int] = None
 
+class BookSchemaReviews(BookSchemaBase):
+    reviews: Optional[List[int]] = None
+
+    class Config:
+        from_attributes = True
+        orm_mode = True
+
 
 

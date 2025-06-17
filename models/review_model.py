@@ -10,5 +10,12 @@ class BookReview(settings.DBBASEMODEL):
     user = Column(Integer, ForeignKey("usuarios.id"))
     comment = Column(String(144), nullable=True)
     rating = Column(Float, nullable=False)
+    book_details = relationship(
+        "BookModel",
+        back_populates="reviews",
+        lazy="joined"
+    )
+    
+    
 
     

@@ -20,3 +20,4 @@ class LoanRequestModel(settings.DBBASEMODEL):
     user = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     status = Column(EnumSQL(Status), default=Status.pending)
     changer_by = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    

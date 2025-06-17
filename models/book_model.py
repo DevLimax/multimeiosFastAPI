@@ -14,3 +14,9 @@ class BookModel(settings.DBBASEMODEL):
     genre_two = Column(Integer, ForeignKey("generos.id"), nullable=True)
     quantity = Column(Integer, default=0)
     added_by = Column(Integer, ForeignKey("usuarios.id"))
+    reviews = relationship(
+        "BookReview",
+        cascade="all, delete-orphan",
+        back_populates="book",
+        lazy="joined"
+    )
