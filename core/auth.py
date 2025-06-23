@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import EmailStr
 from sqlalchemy.future import select
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from models.user_model import UserModel
@@ -14,11 +15,17 @@ oauth2_schema = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/users/login"
 )
 
-async def authenticate(email: str, password: str, db: AsyncSession) -> Optional[UserModel]:
+async def authenticate(userInput: str, password: str, db: AsyncSession) -> Optional[UserModel]:
     async with db as session:
-        query = select(UserModel).filter(UserModel.email == email)
+        query = select(UserModel).filter(or_(
+            UserModel.email == userInput,
+            UserModel.username == userInput
+        ))
         result = await session.execute(query)
         user: UserModel =  result.scalars().unique().one_or_none()
+        user.last_login = datetime.now()
+        await session.commit()
+        await session.refresh(user)
 
         if not user:
             return None

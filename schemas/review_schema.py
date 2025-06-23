@@ -3,8 +3,8 @@ from pydantic import BaseModel, EmailStr
 
 class ReviewSchemaBase(BaseModel):
     id: Optional[int] = None
-    book: int
-    user: int 
+    book_id: int
+    user_id: Optional[int] = None 
     comment: Optional[str] = None
     rating: float
 

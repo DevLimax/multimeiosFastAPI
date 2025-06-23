@@ -4,8 +4,8 @@ from datetime import datetime
 
 class BookLoanSchemaBase(BaseModel):
     id: Optional[int] = None
-    book: int
-    user: int
+    book_id: int
+    user_id: int
     status: str
     loan_date: datetime
     return_date: datetime
@@ -17,8 +17,8 @@ class BookLoanSchemaBase(BaseModel):
 
 
 class BookLoanSchemaUpdate(BookLoanSchemaBase):
-    book: Optional[int] = None
-    user: Optional[int] = None
+    book_id: Optional[int] = None
+    user_id: Optional[int] = None
     status: Optional[str] = None
     loan_date: Optional[datetime] = None
     return_date: Optional[datetime] = None 

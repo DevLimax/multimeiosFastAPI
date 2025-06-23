@@ -5,9 +5,8 @@ from core.configs import settings
 engine: AsyncEngine = create_async_engine(settings.DB_URL)
 
 Session: AsyncSession = sessionmaker(
-    autocommit=True,
-    autoflush=True,
-    expire_on_minutes=False,
+    autoflush=False,
+    expire_on_commit=False,
     class_=AsyncSession,
     bind=engine
 )
