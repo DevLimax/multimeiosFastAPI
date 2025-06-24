@@ -14,26 +14,24 @@ from models.review_model import BookReview
 from schemas.review_schema import ReviewSchemaBase, ReviewSchemaUpdate
 
 from core.deps import get_session, get_current_user
-from utils.search_in_db import search_item_in_db
+from utils.search_in_db import search_item_in_db, search_all_itens_in_db
+from utils.exceptionsHttp import not_found, unauthorized, exception_not_identified, user_book_conflict
 
 router = APIRouter()
 
 #GET All Reviews
 @router.get("/", response_model=List[ReviewSchemaBase])
 async def get_reviews(db: AsyncSession = Depends(get_session)):
-    async with db as session:
-        query = select(BookReview).order_by(BookReview.id)
-        result = await session.execute(query)
-        reviews: List[BookReview] = result.scalars().all()
-        return reviews
+    reviews = await search_all_itens_in_db(db=db, Model=BookReview)
+    return reviews
     
 #GET Review By ID
 @router.get("/{review_id}", response_model=ReviewSchemaBase)
 async def get_review(review_id: int, db: AsyncSession = Depends(get_session)):
-    review = search_item_in_db(id=review_id, Model=BookReview, db=db)
+    review = await search_item_in_db(id=review_id, Model=BookReview, db=db)
 
     if not review:
-        raise HTTPException(detail="Avaliação não encontrada")
+        not_found() 
     
     return review
 
@@ -50,12 +48,36 @@ async def create_review(review: ReviewSchemaBase,
         rating = review.rating
     )
 
-    async with db as session:
-        try:
-            session.add(new_review)
-            await session.commit()
-            await session.refresh(new_review)
-            return new_review
-        except IntegrityError:
-            raise HTTPException(detail="Erro ja éxiste uma avaliação do usúario para esse livro.", status_code=status.HTTP_409_CONFLICT)
+    if new_review.rating > 5:
+        raise HTTPException(detail="A nota para avaliação deve estar entre 1 e 5, exemplo: 4.8", status_code=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        db.add(new_review)
+        await db.commit()
+        await db.refresh(new_review)
+        return new_review
+    except IntegrityError:
+        user_book_conflict(tablename=BookReview.__tablename__)
+    except Exception as e:
+        exception_not_identified(error=e)
+    
+#DELETE Review
+@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete(review_id: int, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
+    if not current_user.is_admin:
+        unauthorized()
+    
+    review = await search_item_in_db(id=review_id, db=db, Model=BookReview)
+    if not review:
+        not_found()
+
+    try:
+        await db.delete(review)
+        await db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        exception_not_identified(error=e)
+
+
+
 

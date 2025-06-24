@@ -4,6 +4,7 @@ from pydantic import Field
 from pydantic import BaseModel, EmailStr
 from typing_extensions import Annotated, Doc
 from datetime import datetime
+from .review_schema import ReviewSchemaBase
 
 class BookSchemaBase(BaseModel):
     id: Optional[int] = None
@@ -23,7 +24,7 @@ class BookSchemaBase(BaseModel):
 
 
 class BookSchemaReviews(BookSchemaBase):
-    reviews: Optional[List[int]] = None
+    reviews: Optional[List[ReviewSchemaBase]] = None
 
     class Config:
         from_attributes = True

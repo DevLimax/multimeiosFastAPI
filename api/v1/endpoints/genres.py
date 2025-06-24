@@ -12,6 +12,9 @@ from models.user_model import UserModel
 from models.genre_model import GenreModel
 from schemas.genre_schema import GenreSchemaBase, GenreSchemaUpdate
 
+from utils.search_in_db import *
+from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized
+
 from core.deps import get_session, get_current_user
 
 router = APIRouter()
@@ -19,22 +22,16 @@ router = APIRouter()
 #GET All Genres
 @router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
 async def get_genres(db: AsyncSession = Depends(get_session)):
-    async with db as session:
-        query = select(GenreModel).order_by(GenreModel.id)
-        result = await session.execute(query)
-        genres = result.scalars().unique().all()
-        return genres
+    genres = await search_all_itens_in_db(db=db, Model=GenreModel)
+    return genres
     
 #GET Genre by ID
 @router.get("/{genre_id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
 async def get_genre(genre_id: int, db: AsyncSession = Depends(get_session)):
-    async with db as session:
-        query = select(GenreModel).filter(GenreModel.id == genre_id)
-        result = await session.execute(query)
-        genre = result.scalars().unique().one_or_none()
-        if not genre:
-            raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
-        return genre
+    genre = await search_item_in_db(id=genre_id, db=db, Model=GenreModel)
+    if not genre:
+        not_found()
+    return genre
 
 #POST Genre
 @router.post("/", response_model=GenreSchemaBase, status_code=status.HTTP_201_CREATED)
@@ -42,21 +39,22 @@ async def post_genre(genre: GenreSchemaBase,
                      db: AsyncSession = Depends(get_session),
                      current_user: UserModel = Depends(get_current_user)
 ):
-    async with db as session:
-        if not current_user.is_admin:
-            raise HTTPException(detail="Usuário não tem permissão para criar gêneros", status_code=status.HTTP_401_UNAUTHORIZED)
+    if not current_user.is_admin:
+        unauthorized()
 
-        new_genre = GenreModel(
-            name=genre.name.title(),
-        )
-        try:
-            session.add(new_genre)
-            await session.commit()
-            await session.refresh(new_genre)
-            return new_genre
-        except IntegrityError:
-            await session.rollback()
-            raise HTTPException(detail="Gênero já existe", status_code=status.HTTP_409_CONFLICT)
+    new_genre = GenreModel(
+        name=genre.name.title(),
+    )
+    try:
+        db.add(new_genre)
+        await db.commit()
+        await db.refresh(new_genre)
+        return new_genre
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(detail="Gênero já existe", status_code=status.HTTP_409_CONFLICT)
+    except Exception as e:
+        exception_not_identified(error=e)
 
 #UPDATE Genre
 @router.put("/{genre_id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
@@ -65,38 +63,30 @@ async def put_genre(genre_id: int,
                     db: AsyncSession = Depends(get_session),
                     current_user: UserModel = Depends(get_current_user)
 ):
-    async with db as session:
-        if not current_user.is_admin:
-            raise HTTPException(detail="Usuário não tem permissão para alterar gêneros", status_code=status.HTTP_401_UNAUTHORIZED)
+    if not current_user.is_admin:
+        unauthorized()
         
-        query = select(GenreModel).filter(GenreModel.id == genre_id)
-        result = await session.execute(query)
-        genre_up = result.scalar_one_or_none()
-
-        if not genre_up:
-            raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
-        
-        if genre.name:
-            genre_up.name = genre.name
-
-        session.commit()
-        session.refresh(genre_up)
-        return genre_up
+    genre_db = search_item_in_db(id=genre_id, db=db, Model=GenreModel)
+    if not genre_db:
+           raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
     
+    for key, value in genre.dict(exclude_unset=True).items():
+        if value is not None:
+            setattr(genre_db, key, value)
+    
+    await db.commit()
+    await db.refresh(genre_db)
+    return genre_db
+
 #DELETE Genre
 @router.delete("/{genre_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_genre(genre_id: int,
                        db: AsyncSession = Depends(get_session)
 ):
-    async with db as session:
-        query = select(GenreModel).filter(GenreModel.id == genre_id)
-        result = await session.execute(query)
-        genre = result.scalars().unique().one_or_none()
-
-        if not genre:
-            raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
+    genre = search_item_in_db(id=genre_id, db=db, Model=GenreModel)
+    if not genre:
+        not_found()
         
-        await session.delete(genre)
-        await session.commit()
-        print(f"Gênero {genre_id} - {genre.name} deletado com sucesso")
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    await db.delete(genre)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

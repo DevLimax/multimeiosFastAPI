@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, ForeignKey,Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from core.configs import settings
 from .baseModel import Base
+
 
 class BookModel(Base):
     __tablename__ = "livros"
@@ -14,7 +15,11 @@ class BookModel(Base):
     genre_id = Column(Integer, ForeignKey("generos.id"))
     genre_two_id = Column(Integer, ForeignKey("generos.id"), nullable=True)
     quantity = Column(Integer, default=0)
-    added_by = Column(Integer, ForeignKey("usuarios.id"))
+    added_by = Column(Integer, ForeignKey("usuarios.id"))   
+
+    __table_args__ = (
+        UniqueConstraint("title","author", name="uq_title_author_books"),
+    )
     
 
 #Reations - One to Many

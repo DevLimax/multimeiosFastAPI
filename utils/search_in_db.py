@@ -5,18 +5,16 @@ from .exceptionsHttp import not_found
 from fastapi import Response, status
 
 async def search_item_in_db(id: int, Model: settings.DBBASEMODEL, db: AsyncSession):
-    async with db as session:
-        query = select(Model).filter(Model.id == id )
-        result = await session.execute(query)
-        item = result.scalars().unique().one_or_none()
-        return item
+    query = select(Model).filter(Model.id == id )
+    result = await db.execute(query)
+    item = result.scalars().unique().one_or_none()
+    return item
 
 async def search_all_itens_in_db(Model: settings.DBBASEMODEL, db: AsyncSession):
-    async with db as session:
-        query = select(Model).order_by(Model.id)
-        result = await session.execute(query)
-        list_itens = result.scalars().unique().all()
-        return list_itens
+    query = select(Model).order_by(Model.id)
+    result = await db.execute(query)
+    list_itens = result.scalars().unique().all()
+    return list_itens
     
 
         

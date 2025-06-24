@@ -9,12 +9,18 @@ class BookLoanSchemaBase(BaseModel):
     status: str
     loan_date: datetime
     return_date: datetime
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None 
+    updated_at: Optional[datetime] = None 
 
     class Config:
         from_attributes = True
 
+class BookLoanSchemaCreate(BookLoanSchemaBase):
+    book_id: int
+    book_user: int
+    status: Optional[str] = None
+    loan_date: Optional[datetime] = None
+    return_date: Optional[datetime] = None 
 
 class BookLoanSchemaUpdate(BookLoanSchemaBase):
     book_id: Optional[int] = None

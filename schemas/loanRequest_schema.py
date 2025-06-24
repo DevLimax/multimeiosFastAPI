@@ -1,6 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from .review_schema import ReviewSchemaBase
 
 class LoanSchemaBase(BaseModel):
     id: Optional[int] = None

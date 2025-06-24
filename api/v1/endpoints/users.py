@@ -16,6 +16,9 @@ from core.deps import get_session, get_current_user
 from core.security import generate_hashed_password
 from core.auth import create_access_token, authenticate
 
+from utils.exceptionsHttp import not_found, unauthorized, exception_not_identified
+from utils.search_in_db import search_all_itens_in_db, search_item_in_db
+
 from datetime import datetime
 import os
 import shutil
@@ -74,83 +77,57 @@ async def create_user(form: UserSchemaCreateForm = Depends(),
             await session.commit()
             return new_user
         except IntegrityError:
-            raise HTTPException(detail="Já existe um usuário com esse endereço de email", status_code=status.HTTP_409_CONFLICT)
+            raise HTTPException(detail="Já existe um usuário com esse endereço de email ou matricula", status_code=status.HTTP_409_CONFLICT)
         
 #GET All Users
 @router.get("/", response_model=List[UserSchemaBase])
-async def get_users(expand: Optional[str] = None, 
-                    db: AsyncSession = Depends(get_session)
-):
-    expand_list = expand.split(",") if expand else []
-    async with db as session:
-        query = select(UserModel).order_by(UserModel.id)
-        result = await session.execute(query)
-        users: List[UserModel] = result.scalars().unique().all()
-        return users
+async def get_users( db: AsyncSession = Depends(get_session)):
+    users = await search_all_itens_in_db(Model=UserModel, db=db)
+    return users
     
 #GET User By ID
 @router.get("/{user_id}", response_model=UserSchemaWithExtras, status_code=status.HTTP_200_OK)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_session)):
-    async with db as session:
-        query = select(UserModel).filter(UserModel.id == user_id)
-        result = await session.execute(query)
-        user = result.scalars().unique().one_or_none()
+async def get_user(user_id: int, 
+                   db: AsyncSession = Depends(get_session)):
+    user = await search_item_in_db(id=user_id, db=db, Model=UserModel)
+    if not user:
+        not_found()
 
-        if not user:
-            raise HTTPException(detail="Usúario não encontrado", 
-                                status_code=status.HTTP_404_NOT_FOUND)
-        return user
+    return user
     
 #PUT User
 @router.put("/{user_id}", response_model=UserSchemaBase, status_code=status.HTTP_202_ACCEPTED)
 async def put_user(user_id: int,
-                   form: UserSchemaUpdateForm = Depends(),
+                   user: UserSchemaUpdateForm = Depends(),
                    profileImage: Optional[UploadFile] = File(None),
                    db: AsyncSession = Depends(get_session), 
                    current_user: UserModel = Depends(get_current_user)
 ):
-    async with db as session:
-        query = select(UserModel).filter(UserModel.id == user_id)
-        result = await session.execute(query)
-        user_up = result.scalars().unique().one_or_none()
+    user_db = await search_item_in_db(id=user_id, db=db, Model=UserModel)
 
-        if not user_up:
-            raise HTTPException(detail="Usúario não encontrado", 
-                                status_code=status.HTTP_404_NOT_FOUND)
+    if not user_db:
+        not_found()
         
-        if not current_user.is_admin and user_up.id != current_user.id:
-            raise HTTPException(detail="Usuário não tem permissão para alterar outro usuario",status_code=status.HTTP_401_UNAUTHORIZED)
+    if not current_user.is_admin and user_db.id != current_user.id:
+        unauthorized()
         
-        elif current_user.is_admin or user_up.id == current_user.id:
-            if form.first_name:
-                user_up.first_name = form.first_name.title()
-            if form.last_name:
-                user_up.last_name = form.last_name.title()
-            if form.enrollment:
-                user_up.enrollment = form.enrollment
-            if form.email:
-                user_up.email = form.email
-            if form.password:
-                user_up.password = generate_hashed_password(form.password)
-            if profileImage:
-                if profileImage.content_type not in ["image/jpeg", "image/png"]:
-                    raise HTTPException(detail="Formato de imagem inválido")
-                filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
-                filepath = os.path.join("static/images/profiles/", filename)
-                with open(filepath, "wb") as buffer:
-                    shutil.copyfileobj(profileImage.file, buffer)
-                user_up.profile_image = filepath
-            if form.is_admin:
-                user_up.is_admin = form.is_admin
-            if form.is_admin == False:
-                user_up.is_admin = False
-            if form.is_active:
-                user_up.is_active = form.is_active
-            if form.is_active == False:
-                user_up.is_active = False
-        await session.commit()
-        await session.refresh(user_up)
-        return user_up
+    elif current_user.is_admin or user_db.id == current_user.id:
+        for key, value in user.__dict__.items():
+            if value is not None:
+                setattr(user_db, key, value)
+        
+    if profileImage:
+            if profileImage.content_type not in ["image/jpeg", "image/png"]:
+                raise HTTPException(detail="Formato de imagem inválido")
+            filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
+            filepath = os.path.join("static/images/profiles/", filename)
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(profileImage.file, buffer)
+            user_db.profile_image = filepath
+    
+    await db.commit()
+    await db.refresh(user_db)
+    return user_db
     
 #DELETE User
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -158,24 +135,19 @@ async def delete_user(user_id: int ,
                       db: AsyncSession = Depends(get_session),
                       current_user: UserModel = Depends(get_current_user)
 ):
-    async with db as session:
-        query = select(UserModel).filter(UserModel.id == user_id)
-        result = await session.execute(query)
-        user = result.scalars().unique().one_or_none()   
-    
+    user = await search_item_in_db(id=user_id, db=db, Model=UserModel)
     if not user:
-        raise HTTPException(detail="Usúario não encontrado", 
-            status_code=status.HTTP_404_NOT_FOUND)
+        not_found()
 
     if not current_user.is_admin and user.id != current_user.id:
-        raise HTTPException(detail="Usuário não tem permissão para excluir outro usuario",
-                            status_code=status.HTTP_401_UNAUTHORIZED)
+        unauthorized()
     
     elif current_user.is_admin or user.id == current_user.id:
-        async with db as session:
-            await session.delete(user)
-            await session.commit()
+        try:
+            await db.delete(user)
+            await db.commit()
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        
-
-
+        except Exception as e:
+            exception_not_identified(error=e)
+            
+    
