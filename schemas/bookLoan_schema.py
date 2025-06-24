@@ -17,7 +17,7 @@ class BookLoanSchemaBase(BaseModel):
 
 class BookLoanSchemaCreate(BookLoanSchemaBase):
     book_id: int
-    book_user: int
+    user_id: int
     status: Optional[str] = None
     loan_date: Optional[datetime] = None
     return_date: Optional[datetime] = None 

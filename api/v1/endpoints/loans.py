@@ -25,24 +25,26 @@ router = APIRouter()
 #GET All
 @router.get("/", response_model=List[BookLoanSchemaBase])
 async def get_all(db: AsyncSession = Depends(get_session)):
-    loans = await search_all_itens_in_db(db=db, Model=BookLoanModel)
-    return loans
+    async with db as session:
+        loans = await search_all_itens_in_db(db=session, Model=BookLoanModel)
+        return loans
     
 #GET By ID
 @router.get("/{loan_id}", response_model=BookLoanSchemaBase)
 async def get(loan_id: int, db: AsyncSession = Depends(get_session)):
-    loan = await search_item_in_db(id=loan_id, db=db, Model=BookLoanModel)
+    async with db as session:
+        loan = await search_item_in_db(id=loan_id, db=session, Model=BookLoanModel)
 
-    if not loan:
-        not_found()
+        if not loan:
+            not_found()
 
-    return loan
+        return loan
     
 #POST Loan
 @router.post("/", response_model=BookLoanSchemaBase, status_code=status.HTTP_201_CREATED)
 async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
     if not current_user.is_admin:
-        raise HTTPException(detail="Usuário sem autorização para realizar ação", status_code=status.HTTP_401_UNAUTHORIZED)
+        unauthorized()
 
     new_loan = BookLoanModel(
         book_id = loan.book_id,
@@ -53,8 +55,13 @@ async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_sessio
     )
 
     async with db as session:
+        book = await search_item_in_db(id=loan.book_id, db=session, Model=BookModel)
+        if book.quantity <= 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Essse livro de ID:{book.id} não está disponível para empréstimo. o mesmo se encontra com a quantidade de {book.quantity} unidades.")
+        
         try:
             session.add(new_loan)
+            book.quantity -= 1
             await session.commit()
             await session.refresh(new_loan)
             return new_loan
@@ -69,17 +76,18 @@ async def update(loan_id: int, loan: BookLoanSchemaUpdate, db: AsyncSession = De
     if not current_user.is_admin:
         unauthorized()
 
-    loan_db = await search_item_in_db(id=loan_id, db=db, Model=BookLoanModel)
-    if not loan_db:
-        not_found()
+    async with db as session:
+        loan_db = await search_item_in_db(id=loan_id, db=session, Model=BookLoanModel)
+        if not loan_db:
+            not_found()
 
-    for key, value in loan.dict(exclude_unset=True).items():
-        setattr(loan_db, key, value)
-    loan_db.updated_at = datetime.now()
+        for key, value in loan.dict(exclude_unset=True).items():
+            setattr(loan_db, key, value)
+        loan_db.updated_at = datetime.now()
 
-    await db.commit()
-    await db.refresh(loan_db)
-    return loan_db
+        await session.commit()
+        await session.refresh(loan_db)
+        return loan_db
 
 #DELETE Loan 
 @router.delete("/{loan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -87,16 +95,17 @@ async def delete(loan_id: int, db: AsyncSession = Depends(get_session), current_
     if not current_user.is_admin:
         unauthorized()
 
-    loan = search_item_in_db(id=loan_id, db=db, Model=BookLoanModel)
-    if not loan:
-        not_found()
+    async with db as session:
+        loan = search_item_in_db(id=loan_id, db=session, Model=BookLoanModel)
+        if not loan:
+            not_found()
 
-    try:
-        await db.delete(loan)
-        await db.commit()
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except Exception as e:
-        exception_not_identified(error=e)
+        try:
+            await db.delete(loan)
+            await db.commit()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            exception_not_identified(error=e)
 
 
 

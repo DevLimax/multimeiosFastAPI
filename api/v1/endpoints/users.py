@@ -82,18 +82,20 @@ async def create_user(form: UserSchemaCreateForm = Depends(),
 #GET All Users
 @router.get("/", response_model=List[UserSchemaBase])
 async def get_users( db: AsyncSession = Depends(get_session)):
-    users = await search_all_itens_in_db(Model=UserModel, db=db)
-    return users
+    async with db as session:
+        users = await search_all_itens_in_db(Model=UserModel, db=db)
+        return users
     
 #GET User By ID
 @router.get("/{user_id}", response_model=UserSchemaWithExtras, status_code=status.HTTP_200_OK)
 async def get_user(user_id: int, 
                    db: AsyncSession = Depends(get_session)):
-    user = await search_item_in_db(id=user_id, db=db, Model=UserModel)
-    if not user:
-        not_found()
+    async with db as session:
+        user = await search_item_in_db(id=user_id, db=session, Model=UserModel)
+        if not user:
+            not_found()
 
-    return user
+        return user
     
 #PUT User
 @router.put("/{user_id}", response_model=UserSchemaBase, status_code=status.HTTP_202_ACCEPTED)
@@ -103,20 +105,21 @@ async def put_user(user_id: int,
                    db: AsyncSession = Depends(get_session), 
                    current_user: UserModel = Depends(get_current_user)
 ):
-    user_db = await search_item_in_db(id=user_id, db=db, Model=UserModel)
+    async with db as session:
+        user_db = await search_item_in_db(id=user_id, db=session, Model=UserModel)
 
-    if not user_db:
-        not_found()
+        if not user_db:
+            not_found()
         
-    if not current_user.is_admin and user_db.id != current_user.id:
-        unauthorized()
+        if not current_user.is_admin and user_db.id != current_user.id:
+            unauthorized()
         
-    elif current_user.is_admin or user_db.id == current_user.id:
-        for key, value in user.__dict__.items():
-            if value is not None:
-                setattr(user_db, key, value)
+        elif current_user.is_admin or user_db.id == current_user.id:
+            for key, value in user.__dict__.items():
+                if value is not None:
+                    setattr(user_db, key, value)
         
-    if profileImage:
+        if profileImage:
             if profileImage.content_type not in ["image/jpeg", "image/png"]:
                 raise HTTPException(detail="Formato de imagem inválido")
             filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
@@ -125,9 +128,9 @@ async def put_user(user_id: int,
                 shutil.copyfileobj(profileImage.file, buffer)
             user_db.profile_image = filepath
     
-    await db.commit()
-    await db.refresh(user_db)
-    return user_db
+        await session.commit()
+        await session.refresh(user_db)
+        return user_db
     
 #DELETE User
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -135,19 +138,20 @@ async def delete_user(user_id: int ,
                       db: AsyncSession = Depends(get_session),
                       current_user: UserModel = Depends(get_current_user)
 ):
-    user = await search_item_in_db(id=user_id, db=db, Model=UserModel)
-    if not user:
-        not_found()
+    async with db as session:
+        user = await search_item_in_db(id=user_id, db=session, Model=UserModel)
+        if not user:
+            not_found()
 
-    if not current_user.is_admin and user.id != current_user.id:
-        unauthorized()
-    
-    elif current_user.is_admin or user.id == current_user.id:
-        try:
-            await db.delete(user)
-            await db.commit()
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            exception_not_identified(error=e)
+        if not current_user.is_admin and user.id != current_user.id:
+            unauthorized()
+        
+        elif current_user.is_admin or user.id == current_user.id:
+            try:
+                await session.delete(user)
+                await session.commit()
+                return Response(status_code=status.HTTP_204_NO_CONTENT)
+            except Exception as e:
+                exception_not_identified(error=e)
             
     

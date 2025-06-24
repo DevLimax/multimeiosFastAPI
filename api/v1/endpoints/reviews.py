@@ -22,18 +22,20 @@ router = APIRouter()
 #GET All Reviews
 @router.get("/", response_model=List[ReviewSchemaBase])
 async def get_reviews(db: AsyncSession = Depends(get_session)):
-    reviews = await search_all_itens_in_db(db=db, Model=BookReview)
-    return reviews
+    async with db as session:
+        reviews = await search_all_itens_in_db(db=session, Model=BookReview)
+        return reviews
     
 #GET Review By ID
 @router.get("/{review_id}", response_model=ReviewSchemaBase)
 async def get_review(review_id: int, db: AsyncSession = Depends(get_session)):
-    review = await search_item_in_db(id=review_id, Model=BookReview, db=db)
+    async with db as session:
+        review = await search_item_in_db(id=review_id, Model=BookReview, db=session)
 
-    if not review:
-        not_found() 
-    
-    return review
+        if not review:
+            not_found() 
+        
+        return review
 
 #POST Review
 @router.post("/",  response_model=ReviewSchemaBase, status_code=status.HTTP_201_CREATED)
@@ -51,15 +53,16 @@ async def create_review(review: ReviewSchemaBase,
     if new_review.rating > 5:
         raise HTTPException(detail="A nota para avaliação deve estar entre 1 e 5, exemplo: 4.8", status_code=status.HTTP_403_FORBIDDEN)
     
-    try:
-        db.add(new_review)
-        await db.commit()
-        await db.refresh(new_review)
-        return new_review
-    except IntegrityError:
-        user_book_conflict(tablename=BookReview.__tablename__)
-    except Exception as e:
-        exception_not_identified(error=e)
+    async with db as session:
+        try:
+            session.add(new_review)
+            await session.commit()
+            await session.refresh(new_review)
+            return new_review
+        except IntegrityError:
+            user_book_conflict(tablename=BookReview.__tablename__)
+        except Exception as e:
+            exception_not_identified(error=e)
     
 #DELETE Review
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -67,16 +70,17 @@ async def delete(review_id: int, db: AsyncSession = Depends(get_session), curren
     if not current_user.is_admin:
         unauthorized()
     
-    review = await search_item_in_db(id=review_id, db=db, Model=BookReview)
-    if not review:
-        not_found()
+    async with db as session:
+        review = await search_item_in_db(id=review_id, db=session, Model=BookReview)
+        if not review:
+            not_found()
 
-    try:
-        await db.delete(review)
-        await db.commit()
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except Exception as e:
-        exception_not_identified(error=e)
+        try:
+            await session.delete(review)
+            await session.commit()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            exception_not_identified(error=e)
 
 
 

@@ -9,8 +9,9 @@ from .baseModel import Base
 class Status(str, Enum):
     pending = "Pendente"
     approved = "Aprovado"
+    denied_due_lack_stock = "Negado Por Falta de Estoque"
+    denied_due_user_limit = "Negado Por Limite de Empréstimos"
     denied = "Negado"
-
 
 class LoanRequestModel(Base):
     __tablename__ = "solicitacoes_emprestimos"
@@ -20,6 +21,7 @@ class LoanRequestModel(Base):
     user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     status = Column(EnumSQL(Status, name="status_solicitacoes"), default=Status.pending)
     changer_by = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
     
 
     __table_args__ = (

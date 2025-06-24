@@ -26,26 +26,29 @@ router = APIRouter()
 #GET All Books
 @router.get("/", response_model=List[BookSchemaBase], status_code=status.HTTP_200_OK)
 async def get_books(db: AsyncSession = Depends(get_session)):
-    books = await search_all_itens_in_db(db=db, Model=BookModel)
-    return books
+    async with db as session:
+        books = await search_all_itens_in_db(db=session, Model=BookModel)
+        return books
     
 #GET Book by ID
 @router.get("/{book_id}", response_model=BookSchemaBase, status_code=status.HTTP_200_OK)
 async def get_book(book_id: int, db: AsyncSession = Depends(get_session)):
-    book = await search_item_in_db(id=book_id, db=db, Model=BookModel)
-    if not book:
-        not_found()
+    async with db as session:
+        book = await search_item_in_db(id=book_id, db=session, Model=BookModel)
+        if not book:
+            not_found()
 
-    return book
+        return book
     
 #GET Book by ID with Reviews
 @router.get("/{book_id}/reviews", response_model=BookSchemaReviews, status_code=status.HTTP_200_OK)
 async def get_book_reviews(book_id:int, db: AsyncSession = Depends(get_session)):
-    book = await search_item_in_db(id=book_id, db=db, Model=BookModel)
-    if not book:
-        not_found()
+    async with db as session:
+        book = await search_item_in_db(id=book_id, db=session, Model=BookModel)
+        if not book:
+            not_found()
 
-    return book
+        return book
     
 #POST Book
 @router.post("/", response_model=BookSchemaBase, status_code=status.HTTP_201_CREATED)
@@ -98,28 +101,28 @@ async def update_book(book_id: int,
 ):
     if not current_user.is_admin:
         unauthorized()
-    
-    book_db = await search_item_in_db(id=book_id, db=db, Model=BookModel)
+    async with db as session:
+        book_db = await search_item_in_db(id=book_id, db=session, Model=BookModel)
 
-    if not book_db:
-        not_found()
-    
-    for key, value in book.__dict__.items():
-        if value is not None:
-            setattr(book_db, key, value)
-    
-    if fileCover:
-        if fileCover.content_type not in ["image/jpeg", "image/png"]:
-            raise HTTPException(detail="Formato de imagem inválido")
-        filename = f"{uuid.uuid4().hex}_{fileCover.filename}"
-        filepath = os.path.join("static/images/covers/", filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(fileCover.file, buffer)
-        book_db.cover = filepath
+        if not book_db:
+            not_found()
+        
+        for key, value in book.__dict__.items():
+            if value is not None:
+                setattr(book_db, key, value)
+        
+        if fileCover:
+            if fileCover.content_type not in ["image/jpeg", "image/png"]:
+                raise HTTPException(detail="Formato de imagem inválido")
+            filename = f"{uuid.uuid4().hex}_{fileCover.filename}"
+            filepath = os.path.join("static/images/covers/", filename)
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(fileCover.file, buffer)
+            book_db.cover = filepath
 
-    await db.commit()
-    await db.refresh(book_db)
-    return book_db
+        await session.commit()
+        await session.refresh(book_db)
+        return book_db
     
 #DELETE Book
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -130,13 +133,14 @@ async def del_book(book_id: int,
     if not current_user.is_admin:
         unauthorized()
 
-    book = await search_item_in_db(id=book_id, db=db, Model=BookModel)
+    async with db as session:
+        book = await search_item_in_db(id=book_id, db=session, Model=BookModel)
 
-    if not book:
-        not_found()
-    
-    await db.delete(book)
-    await db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        if not book:
+            not_found()
+        
+        await session.delete(book)
+        await session.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

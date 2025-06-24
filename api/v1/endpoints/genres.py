@@ -22,16 +22,18 @@ router = APIRouter()
 #GET All Genres
 @router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
 async def get_genres(db: AsyncSession = Depends(get_session)):
-    genres = await search_all_itens_in_db(db=db, Model=GenreModel)
-    return genres
+    async with db as session:
+        genres = await search_all_itens_in_db(db=session, Model=GenreModel)
+        return genres
     
 #GET Genre by ID
 @router.get("/{genre_id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
 async def get_genre(genre_id: int, db: AsyncSession = Depends(get_session)):
-    genre = await search_item_in_db(id=genre_id, db=db, Model=GenreModel)
-    if not genre:
-        not_found()
-    return genre
+    async with db as session:
+        genre = await search_item_in_db(id=genre_id, db=session, Model=GenreModel)
+        if not genre:
+            not_found()
+        return genre
 
 #POST Genre
 @router.post("/", response_model=GenreSchemaBase, status_code=status.HTTP_201_CREATED)
@@ -66,27 +68,29 @@ async def put_genre(genre_id: int,
     if not current_user.is_admin:
         unauthorized()
         
-    genre_db = search_item_in_db(id=genre_id, db=db, Model=GenreModel)
-    if not genre_db:
-           raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
-    
-    for key, value in genre.dict(exclude_unset=True).items():
-        if value is not None:
-            setattr(genre_db, key, value)
-    
-    await db.commit()
-    await db.refresh(genre_db)
-    return genre_db
+    async with db as session:
+        genre_db = search_item_in_db(id=genre_id, db=session, Model=GenreModel)
+        if not genre_db:
+            raise HTTPException(detail="Gênero não encontrado", status_code=status.HTTP_404_NOT_FOUND)
+        
+        for key, value in genre.dict(exclude_unset=True).items():
+            if value is not None:
+                setattr(genre_db, key, value)
+        
+        await session.commit()
+        await session.refresh(genre_db)
+        return genre_db
 
 #DELETE Genre
 @router.delete("/{genre_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_genre(genre_id: int,
                        db: AsyncSession = Depends(get_session)
 ):
-    genre = search_item_in_db(id=genre_id, db=db, Model=GenreModel)
-    if not genre:
-        not_found()
-        
-    await db.delete(genre)
-    await db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    async with db as session:
+        genre = search_item_in_db(id=genre_id, db=session, Model=GenreModel)
+        if not genre:
+            not_found()
+            
+        await session.delete(genre)
+        await session.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)

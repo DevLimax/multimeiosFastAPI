@@ -24,17 +24,19 @@ router = APIRouter()
 #GET All Requests
 @router.get("/", response_model=List[LoanSchemaBase])
 async def get_all(db: AsyncSession = Depends(get_session)):
-    requests = await search_all_itens_in_db(db=db, Model=LoanRequestModel)
-    return requests
+    async with db as session:
+        requests = await search_all_itens_in_db(db=session, Model=LoanRequestModel)
+        return requests
     
 #GET By ID
 @router.get("/{request_id}", response_model=LoanSchemaBase)
 async def get(request_id: int, db: AsyncSession = Depends(get_session)):
-    request = await search_item_in_db(id=request_id, db=db, Model=LoanRequestModel)
-    if not request:
-       not_found()
+    async with db as session:
+        request = await search_item_in_db(id=request_id, db=session, Model=LoanRequestModel)
+        if not request:
+            not_found()
 
-    return request
+        return request
     
 #POST 
 @router.post("/", response_model=LoanSchemaBase,status_code=status.HTTP_201_CREATED)
@@ -59,7 +61,7 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
         unauthorized()
     
     async with db as session:
-        request_db = await search_item_in_db(id=request_id, db=db, Model=LoanRequestModel)
+        request_db = await search_item_in_db(id=request_id, db=session, Model=LoanRequestModel)
         if not request_db:
             not_found()
         
@@ -83,9 +85,12 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
                 user_id = request_db.user_id,
                 status = StatusLoan.awaiting_withdrawal
             )
+            book = await search_item_in_db(id=new_bookLoan.book_id, db=session, Model=BookModel)
+            if book.quantity <= 0:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                    detail=f"Esse livro de ID:{book.id} não está disponível para empréstimo. O mesmo se encontra com a quantidade de {book.quantity} unidades.")
             try:
                 session.add(new_bookLoan)
-                book = await search_item_in_db(id=new_bookLoan.book_id, db=db, Model=BookModel)
                 book.quantity -= 1
                 await session.commit()
                 await session.refresh(book)
@@ -103,13 +108,14 @@ async def delete(request_id: int, db: AsyncSession = Depends(get_session), curre
     if not current_user.is_admin:
        unauthorized()
     
-    request = await search_item_in_db(id=request_id, db=db, Model=LoanRequestModel)
-    if not request:
-       not_found()
+    async with db as session:
+        request = await search_item_in_db(id=request_id, db=db, Model=LoanRequestModel)
+        if not request:
+            not_found()
 
-    db.delete(request)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        db.delete(request)
+        db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
             
 
 
