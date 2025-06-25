@@ -61,7 +61,7 @@ class BookSchemaForm:
 ):
         self.title = title.title()
         self.author = author.title()
-        self.synopsis = synopsis.title( ) if title else None
+        self.synopsis = synopsis.title( ) if synopsis else None
         self.genre = genre
         self.genre_two = genre_two
         self.quantity = quantity

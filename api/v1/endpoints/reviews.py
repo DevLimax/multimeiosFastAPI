@@ -50,7 +50,7 @@ async def create_review(review: ReviewSchemaBase,
         rating = review.rating
     )
 
-    if new_review.rating > 5:
+    if new_review.rating > 5 or new_review.rating <= 0:
         raise HTTPException(detail="A nota para avaliação deve estar entre 1 e 5, exemplo: 4.8", status_code=status.HTTP_403_FORBIDDEN)
     
     async with db as session:

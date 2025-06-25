@@ -16,6 +16,7 @@ from schemas.loanRequest_schema import LoanSchemaBase, LoanSchemaUpdate
 
 from utils.search_in_db import *
 from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized, user_book_conflict
+from utils.functions import validate_active_loans_limit
 
 from core.deps import get_session, get_current_user
 
@@ -41,18 +42,26 @@ async def get(request_id: int, db: AsyncSession = Depends(get_session)):
 #POST 
 @router.post("/", response_model=LoanSchemaBase,status_code=status.HTTP_201_CREATED)
 async def post(request: LoanSchemaBase, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
+    if not current_user:
+        unauthorized()
+
     new_request = LoanRequestModel(
        book_id = request.book_id,
        user_id = current_user.id
     ) 
-    try:
-        db.add(new_request)
-        await db.commit()
-        await db.refresh(new_request)
-        return new_request
-    except IntegrityError:
-        await db.rollback()
-        user_book_conflict(tablename=LoanRequestModel.__tablename__)
+
+    async with db as session:
+        user = await search_item_in_db(id=current_user.id, db=session, Model=UserModel)
+        validate_active_loans_limit(user=user)
+
+        try:
+            session.add(new_request)
+            await session.commit()
+            await session.refresh(new_request)
+            return new_request
+        except IntegrityError:
+            await session.rollback()
+            user_book_conflict(tablename=LoanRequestModel.__tablename__)
 
 #PUT 
 @router.put("/{request_id}", response_model=LoanSchemaUpdate, status_code=status.HTTP_202_ACCEPTED)
@@ -70,6 +79,16 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
                 setattr(request_db, key, value)
 
         request_db.changer_by = current_user.id
+
+        if request_db.status == StatusRequest.denied_due_lack_stock:
+            request_db.is_active = False
+
+        elif request_db.status == StatusRequest.denied_due_user_limit:
+            request_db.is_active = False
+        
+        elif request_db.status == StatusRequest.denied:
+            request_db.is_active = False
+
         await session.commit()
         await session.refresh(request_db)
 
@@ -85,10 +104,14 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
                 user_id = request_db.user_id,
                 status = StatusLoan.awaiting_withdrawal
             )
+            user = await search_item_in_db(id=new_bookLoan.user_id, db=session, Model=UserModel)
+            validate_active_loans_limit(user=user)
+
             book = await search_item_in_db(id=new_bookLoan.book_id, db=session, Model=BookModel)
             if book.quantity <= 0:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                                     detail=f"Esse livro de ID:{book.id} não está disponível para empréstimo. O mesmo se encontra com a quantidade de {book.quantity} unidades.")
+            
             try:
                 session.add(new_bookLoan)
                 book.quantity -= 1
@@ -100,6 +123,7 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
             except Exception as e:
                 await session.rollback()
                 raise HTTPException(detail=f"Houve um erro na criação do emprestimo após a aprovação: {e}", status_code=status.HTTP_403_FORBIDDEN)
+            
         return request_db
 
 #DELETE

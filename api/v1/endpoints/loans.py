@@ -8,15 +8,16 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
-from models.bookloan_model import BookLoanModel
+from models.bookloan_model import BookLoanModel, Status as StatusLoan
 from models.book_model import BookModel
 from models.user_model import UserModel
 from schemas.bookLoan_schema import BookLoanSchemaBase, BookLoanSchemaUpdate, BookLoanSchemaCreate
 
 from utils.exceptionsHttp import not_found, unauthorized, user_book_conflict, exception_not_identified
 from utils.search_in_db import search_all_itens_in_db, search_item_in_db
+from utils.functions import validate_active_loans_limit
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from core.deps import get_session, get_current_user
 
@@ -54,10 +55,43 @@ async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_sessio
         return_date = loan.return_date
     )
 
+    user = await search_item_in_db(id=loan.user_id, db=db, Model=UserModel)
+    for loan_item in user.loans:
+        if loan_item.book_id == loan.book_id:
+
+            if loan_item.status in [StatusLoan.returned, StatusLoan.returned_after_the_deadline]:
+                now = datetime.now()
+                fifteen_days = timedelta(days=15)
+                grace_period_for_new_loan = loan_item.return_date + fifteen_days
+
+                if grace_period_for_new_loan <= now:
+                    loan_db: BookLoanModel = await search_item_in_db(id=loan_item.id, db=db, Model=BookLoanModel)
+                    print(loan_db)
+                    await db.delete(loan_db)
+                    await db.commit()
+                else:
+                    remaining_days = (grace_period_for_new_loan - now).days
+                    raise HTTPException(detail=f"Não é possivel alugar o mesmo livro ate que a carência de 15 dias expire, faltam {remaining_days} dias", 
+                                        status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                
+            elif loan_item.status == StatusLoan.canceled:
+                db.delete(loan_item)
+                db.commit()
+
+            elif loan_item.status in [StatusLoan.awaiting_withdrawal]:
+                raise HTTPException(detail=f"Já existe um emprestimo desse livro para o aluno: ({loan_item.user_id} - {user.first_name + user.last_name}) pendente de retirada", status_code=status.HTTP_400_BAD_REQUEST)
+
+            else:
+                print(loan_item.status)
+                raise HTTPException(detail=f"Já existe um emprestimo desse livro para o aluno: ({loan_item.user_id} - {user.first_name + user.last_name}) pendente de devolução", status_code=status.HTTP_400_BAD_REQUEST)
+
     async with db as session:
+        user = await search_item_in_db(id=loan.user_id, db=session, Model=UserModel)
+        validate_active_loans_limit(user=user)
+
         book = await search_item_in_db(id=loan.book_id, db=session, Model=BookModel)
-        if book.quantity <= 0:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Essse livro de ID:{book.id} não está disponível para empréstimo. o mesmo se encontra com a quantidade de {book.quantity} unidades.")
+        if book.quantity <= 0 or not book.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Essse livro de ID:{book.id} não está disponível para empréstimo.")
         
         try:
             session.add(new_loan)
@@ -83,7 +117,10 @@ async def update(loan_id: int, loan: BookLoanSchemaUpdate, db: AsyncSession = De
 
         for key, value in loan.dict(exclude_unset=True).items():
             setattr(loan_db, key, value)
-        loan_db.updated_at = datetime.now()
+        loan_db.updated_at = datetime.now(timezone.utc)
+
+        if loan.status in [StatusLoan.returned, StatusLoan.returned_after_the_deadline]:
+            loan_db.is_active = False
 
         await session.commit()
         await session.refresh(loan_db)
@@ -96,7 +133,7 @@ async def delete(loan_id: int, db: AsyncSession = Depends(get_session), current_
         unauthorized()
 
     async with db as session:
-        loan = search_item_in_db(id=loan_id, db=session, Model=BookLoanModel)
+        loan = await search_item_in_db(id=loan_id, db=session, Model=BookLoanModel)
         if not loan:
             not_found()
 

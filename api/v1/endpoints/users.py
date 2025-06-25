@@ -10,6 +10,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
 from models.user_model import UserModel
+from models.bookloan_model import Status
 from schemas.user_schema import UserSchemaBase, UserSchemaWithExtras,UserSchemaCreateForm, UserSchemaUpdateForm
 
 from core.deps import get_session, get_current_user
@@ -94,7 +95,6 @@ async def get_user(user_id: int,
         user = await search_item_in_db(id=user_id, db=session, Model=UserModel)
         if not user:
             not_found()
-
         return user
     
 #PUT User
