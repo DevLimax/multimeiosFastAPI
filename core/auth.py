@@ -23,15 +23,16 @@ async def authenticate(userInput: str, password: str, db: AsyncSession) -> Optio
         ))
         result = await session.execute(query)
         user: UserModel =  result.scalars().unique().one_or_none()
-        user.last_login = datetime.now()
-        await session.commit()
-        await session.refresh(user)
 
         if not user:
             return None
         
         if not verify_password(password=password, hashed_password=user.password):
             return None
+        
+        user.last_login = datetime.now()
+        await session.commit()
+        await session.refresh(user)
         
         return user
     

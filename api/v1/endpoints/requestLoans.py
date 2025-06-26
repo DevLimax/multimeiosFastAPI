@@ -12,7 +12,7 @@ from models.loanRequest_model import LoanRequestModel, Status as StatusRequest
 from models.user_model import UserModel
 from models.book_model import BookLoanModel, BookModel
 from models.bookloan_model import Status as StatusLoan
-from schemas.loanRequest_schema import LoanSchemaBase, LoanSchemaUpdate
+from schemas.loanRequest_schema import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
 
 from utils.search_in_db import *
 from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized, user_book_conflict
@@ -23,14 +23,14 @@ from core.deps import get_session, get_current_user
 router = APIRouter()
 
 #GET All Requests
-@router.get("/", response_model=List[LoanSchemaBase])
+@router.get("/", response_model=List[RequestLoanSchemaBase])
 async def get_all(db: AsyncSession = Depends(get_session)):
     async with db as session:
         requests = await search_all_itens_in_db(db=session, Model=LoanRequestModel)
         return requests
     
 #GET By ID
-@router.get("/{request_id}", response_model=LoanSchemaBase)
+@router.get("/{request_id}", response_model=RequestLoanSchemaBase)
 async def get(request_id: int, db: AsyncSession = Depends(get_session)):
     async with db as session:
         request = await search_item_in_db(id=request_id, db=session, Model=LoanRequestModel)
@@ -40,8 +40,8 @@ async def get(request_id: int, db: AsyncSession = Depends(get_session)):
         return request
     
 #POST 
-@router.post("/", response_model=LoanSchemaBase,status_code=status.HTTP_201_CREATED)
-async def post(request: LoanSchemaBase, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
+@router.post("/", response_model=RequestLoanSchemaBase,status_code=status.HTTP_201_CREATED)
+async def post(request: RequestLoanSchemaCreate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
     if not current_user:
         unauthorized()
 
@@ -64,8 +64,8 @@ async def post(request: LoanSchemaBase, db: AsyncSession = Depends(get_session),
             user_book_conflict(tablename=LoanRequestModel.__tablename__)
 
 #PUT 
-@router.put("/{request_id}", response_model=LoanSchemaUpdate, status_code=status.HTTP_202_ACCEPTED)
-async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
+@router.put("/{request_id}", response_model=RequestLoanSchemaUpdate, status_code=status.HTTP_202_ACCEPTED)
+async def update(request_id: int, request: RequestLoanSchemaUpdate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
     if not current_user.is_admin:
         unauthorized()
     
@@ -99,10 +99,14 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
                 Mas o Usuário-Admin (Professor) conseguirá criar um emprestimo manualmente pela API tambem utilizando os Usuários-Aluno e Livros Disponiveis,
                 e podendo personalizar tambem as datas de emprestimo e retorno.
             """
+            if not request.book_code:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                    detail="Para aprovar uma solicitação de empréstimo, é necessário informar o código do livro.")
+            
             new_bookLoan = BookLoanModel(
                 book_id = request_db.book_id,
                 user_id = request_db.user_id,
-                status = StatusLoan.awaiting_withdrawal
+                book_code = request.book_code
             )
             user = await search_item_in_db(id=new_bookLoan.user_id, db=session, Model=UserModel)
             validate_active_loans_limit(user=user)
@@ -119,7 +123,7 @@ async def update(request_id: int, request: LoanSchemaUpdate, db: AsyncSession = 
                 await session.refresh(book)
                 await session.refresh(new_bookLoan)
                 return Response(content=f"Solicitação aprovada, emprestimo de número ({new_bookLoan.id}) criado.", 
-                                status_code=status.HTTP_202_ACCEPTED)
+                                status_code=status.HTTP_201_CREATED)
             except Exception as e:
                 await session.rollback()
                 raise HTTPException(detail=f"Houve um erro na criação do emprestimo após a aprovação: {e}", status_code=status.HTTP_403_FORBIDDEN)

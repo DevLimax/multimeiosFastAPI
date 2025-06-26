@@ -1,19 +1,30 @@
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_serializer
 from datetime import datetime
 from .review_schema import ReviewSchemaBase
 from models.loanRequest_model import Status
 
-class LoanSchemaBase(BaseModel):
+class RequestLoanSchemaBase(BaseModel):
     id: Optional[int] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
     book_id: int
     user_id: Optional[int] = None
     status: Optional[Status] = None
     changer_by: Optional[int] = None
     is_active: Optional[bool] = None
-
-class LoanSchemaUpdate(LoanSchemaBase):
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_serializer("created_at", "updated_at", when_used="always")
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value:
+            return value.strftime("%d/%m/%Y %H:%M")
+        return None
+
+class RequestLoanSchemaUpdate(RequestLoanSchemaBase):
     book_id: Optional[int] = None
+    book_code: Optional[str] = None
+
+class RequestLoanSchemaCreate(RequestLoanSchemaBase):
+    book_id: int
+
+

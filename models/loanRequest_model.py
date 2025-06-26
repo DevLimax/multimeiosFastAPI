@@ -9,8 +9,9 @@ from .baseModel import Base
 class Status(str, Enum):
     pending = "Pendente"
     approved = "Aprovado"
-    denied_due_lack_stock = "Negado Por Falta de Estoque"
-    denied_due_user_limit = "Negado Por Limite de Empréstimos"
+    denied_due_lack_stock = "Negado por falta de estoque"
+    denied_due_user_limit = "Negado por limite de empréstimos"
+    denied_due_user_fines = "Negado por multas pendentes"
     denied = "Negado"
 
 class LoanRequestModel(Base):

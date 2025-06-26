@@ -35,10 +35,17 @@ def get_logged(user: UserModel = Depends(get_current_user)):
 #POST Login
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_session)):
+    """
+        Endpoint para autenticação de usuário.
+
+        Recebi um formulário com username que recebe username ou email junto com password.
+        Retorna um token de acesso se as credenciais estiverem corretas.
+        Caso contrário, retorna um erro 401-Unauthorized.
+    """
     user = await authenticate(userInput=form_data.username, password=form_data.password, db=db)
 
     if not user:
-        raise HTTPException(detail="Dados de acesso incorretos!",status_code=status.HTTP_403_FORBIDDEN)
+        raise HTTPException(detail="Dados de acesso incorretos!",status_code=status.HTTP_401_UNAUTHORIZED)
     
     return JSONResponse(content={
         "access_token": create_access_token(sub=user.id), 
@@ -47,11 +54,32 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     status_code=status.HTTP_200_OK)
 
 #POST User
-@router.post("/singup", response_model=UserSchemaBase, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=UserSchemaBase, status_code=status.HTTP_201_CREATED)
 async def create_user(form: UserSchemaCreateForm = Depends(),
                       profileImage: Optional[UploadFile] = File(None),
                       db: AsyncSession = Depends(get_session)
 ):  
+    """
+    Criação de usuário.
+
+    Recebe um formulário com os dados do usuário e uma imagem de perfil opcional.
+    Se a imagem for fornecida, deve ser do tipo JPEG ou PNG.
+    Se não for fornecida, será usada uma imagem padrão.
+    Retorna o usuário criado ou um erro 409-Conflict se já existir um usuário com o mesmo email ou matrícula.
+
+    Campos obrigatórios:
+    - username: Nome de usuário único.
+    - email: Endereço de email único.
+    - password: Senha do usuário.
+
+    Campos que devem ser únicos:
+    - enrollment: Matrícula do usuário (opcional, mas se fornecida, deve ser única).
+    - email: Endereço de email (obrigatório, deve ser único).
+    - username: Nome de usuário (obrigatório, deve ser único).
+
+    A grande maioria dos campos são opcionais e preenchem com default ja fornecido no Models, mas se fornecidos, devem ser válidos.
+    """
+
     if profileImage:
         if profileImage.content_type not in ["image/jpeg", "image/png"]:
             raise HTTPException(detail="Formato de imagem inválido")

@@ -1,30 +1,37 @@
 from typing import Optional, List, Annotated, Union
 from fastapi import Form
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_serializer
 from .review_schema import ReviewSchemaBase
 from .bookLoan_schema import BookLoanSchemaBase
-from .loanRequest_schema import LoanSchemaBase
+from .loanRequest_schema import RequestLoanSchemaBase
 from datetime import datetime
 
 class UserSchemaBase(BaseModel):
     id: Optional[int] = None
+    is_admin: bool
+    last_login: Optional[datetime] = None
     username: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     enrollment: Optional[int] = None
     email: EmailStr
-    is_admin: bool
     profile_image: Optional[str] = None
-    last_login: Optional[datetime] = None
     is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
+    @field_serializer("created_at", "updated_at", "last_login", when_used="always")
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value:
+            return value.strftime("%d/%m/%Y %H:%M")
+        return None
     class Config:
         from_attributes = True
 
 class UserSchemaWithExtras(UserSchemaBase):
     reviews: Optional[List[ReviewSchemaBase]] = None
     loans: Optional[List[BookLoanSchemaBase]] = None
-    requestLoans: Optional[List[LoanSchemaBase]] = None
+    requestLoans: Optional[List[RequestLoanSchemaBase]] = None
 
 class UserSchemaCreateForm:
     def __init__(

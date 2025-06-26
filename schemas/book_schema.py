@@ -1,6 +1,6 @@
 from typing import Optional, List, Union
 from fastapi import Form
-from pydantic import Field
+from pydantic import Field, field_serializer
 from pydantic import BaseModel, EmailStr
 from typing_extensions import Annotated, Doc
 from datetime import datetime
@@ -8,6 +8,7 @@ from .review_schema import ReviewSchemaBase
 
 class BookSchemaBase(BaseModel):
     id: Optional[int] = None
+    added_by: Optional[int] = None
     title: str
     author: str
     synopsis: Optional[str] = None
@@ -15,13 +16,18 @@ class BookSchemaBase(BaseModel):
     genre_id: int
     genre_two_id: Optional[int] = None
     quantity: int
-    created_at: datetime
-    added_by: Optional[int] = None
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    @field_serializer("created_at", "updated_at", when_used="always")
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value:
+            return value.strftime("%d/%m/%Y %H:%M")
+        return None
 
     class Config:
         from_attributes = True
-
 
 class BookSchemaReviews(BookSchemaBase):
     reviews: Optional[List[ReviewSchemaBase]] = None
