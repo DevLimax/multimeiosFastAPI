@@ -5,6 +5,9 @@ from .baseModel import Base
 
 class BookReview(Base):
     __tablename__ = "avaliacoes"
+    
+    __variable_name__ = "Avaliação"
+    
     id = Column(Integer, primary_key=True, autoincrement=True)
     book_id = Column(Integer, ForeignKey("livros.id"), nullable=False) 
     user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)  

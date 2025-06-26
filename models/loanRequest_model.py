@@ -16,6 +16,8 @@ class Status(str, Enum):
 
 class LoanRequestModel(Base):
     __tablename__ = "solicitacoes_emprestimos"
+    
+    __variable_name__ = "Solicitação de emprestimo"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     book_id = Column(Integer, ForeignKey("livros.id"), nullable=False)

@@ -24,3 +24,8 @@ class ReviewSchemaUpdate(BaseModel):
     user: Optional[int] = None 
     comment: Optional[str] = None
     rating: Optional[float] = None
+    
+class ReviewSchemaCreate(BaseModel):
+    book_id: int
+    comment: Optional[str] = None
+    rating: float

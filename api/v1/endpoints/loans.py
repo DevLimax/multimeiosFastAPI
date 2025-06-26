@@ -67,6 +67,9 @@ async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_sessio
             new_loan.return_date = loan.return_date
 
     user = await search_item_in_db(id=loan.user_id, db=db, Model=UserModel)
+    if not user:
+        raise HTTPException(detail="Usuário não existe!",status_code=status.HTTP_404_NOT_FOUND)
+        
     for loan_item in user.loans:
         if loan_item.book_id == loan.book_id:
 
@@ -101,6 +104,9 @@ async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_sessio
         validate_active_loans_limit(user=user)
 
         book = await search_item_in_db(id=loan.book_id, db=session, Model=BookModel)
+        if not book:
+            raise HTTPException(detail="Livro nao existe!", status_code=status.HTTP_404_NOT_FOUND)
+            
         if book.quantity <= 0 or not book.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Essse livro de ID:{book.id} não está disponível para empréstimo.")
         
@@ -110,7 +116,7 @@ async def post(loan: BookLoanSchemaCreate, db: AsyncSession = Depends(get_sessio
             await session.commit()
             await session.refresh(new_loan)
             return new_loan
-        except IntegrityError:
+        except IntegrityError as e:
             user_book_conflict(tablename=BookLoanModel.__tablename__)
         except Exception as e:
             exception_not_identified(error=e)

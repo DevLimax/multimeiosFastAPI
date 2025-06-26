@@ -19,6 +19,8 @@ class Status(str, Enum):
 
 class BookLoanModel(Base):
     __tablename__ = "emprestimos"
+    
+    __variable_name__ = "Emprestimo"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     book_id = Column(Integer, ForeignKey("livros.id"), nullable=False)

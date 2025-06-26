@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from models.user_model import UserModel
 from models.book_model import BookModel
 from models.review_model import BookReview
-from schemas.review_schema import ReviewSchemaBase, ReviewSchemaUpdate
+from schemas.review_schema import ReviewSchemaBase, ReviewSchemaUpdate, ReviewSchemaCreate
 
 from core.deps import get_session, get_current_user
 from utils.search_in_db import search_item_in_db, search_all_itens_in_db
@@ -39,7 +39,7 @@ async def get_review(review_id: int, db: AsyncSession = Depends(get_session)):
 
 #POST Review
 @router.post("/",  response_model=ReviewSchemaBase, status_code=status.HTTP_201_CREATED)
-async def create_review(review: ReviewSchemaBase, 
+async def create_review(review: ReviewSchemaCreate, 
                         db: AsyncSession = Depends(get_session), 
                         current_user: UserModel = Depends(get_current_user)
 ):  

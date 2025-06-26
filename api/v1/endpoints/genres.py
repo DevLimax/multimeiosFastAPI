@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models.user_model import UserModel
 from models.genre_model import GenreModel
-from schemas.genre_schema import GenreSchemaBase, GenreSchemaUpdate
+from schemas.genre_schema import GenreSchemaBase, GenreSchemaUpdate, GenreSchemaCreate
 
 from utils.search_in_db import *
 from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized
@@ -37,7 +37,7 @@ async def get_genre(genre_id: int, db: AsyncSession = Depends(get_session)):
 
 #POST Genre
 @router.post("/", response_model=GenreSchemaBase, status_code=status.HTTP_201_CREATED)
-async def post_genre(genre: GenreSchemaBase,
+async def post_genre(genre: GenreSchemaCreate,
                      db: AsyncSession = Depends(get_session),
                      current_user: UserModel = Depends(get_current_user)
 ):

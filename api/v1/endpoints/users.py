@@ -19,6 +19,7 @@ from core.auth import create_access_token, authenticate
 
 from utils.exceptionsHttp import not_found, unauthorized, exception_not_identified
 from utils.search_in_db import search_all_itens_in_db, search_item_in_db
+from utils.functions import user_expands
 
 from datetime import datetime
 import os
@@ -65,24 +66,29 @@ async def create_user(form: UserSchemaCreateForm = Depends(),
     Recebe um formulário com os dados do usuário e uma imagem de perfil opcional.
     Se a imagem for fornecida, deve ser do tipo JPEG ou PNG.
     Se não for fornecida, será usada uma imagem padrão.
-    Retorna o usuário criado ou um erro 409-Conflict se já existir um usuário com o mesmo email ou matrícula.
 
-    Campos obrigatórios:
-    - username: Nome de usuário único.
-    - email: Endereço de email único.
-    - password: Senha do usuário.
-
-    Campos que devem ser únicos:
-    - enrollment: Matrícula do usuário (opcional, mas se fornecida, deve ser única).
-    - email: Endereço de email (obrigatório, deve ser único).
-    - username: Nome de usuário (obrigatório, deve ser único).
+    Campos:
+    - username: Nome de usuário (obrigatório, deve ser único)..
+    - email: Endereço de email único.(obrigatório, deve ser único).
+    - password: Senha do usuário. (obrigatório).
+    - first_name: Primeiro nome do usuário (opcional).
+    - last_name: Sobrenome do usuário (opcional).
+    - enrollment: Matrícula do usuário (opcional, deve ser único).
+    - is_admin: Permissão de admin do usuário (opcional - preenchido automaticamente como False).
+    - profile_image: Imagem de perfil do usuário (opcional - retorna uma imagem default caso seja null).
 
     A grande maioria dos campos são opcionais e preenchem com default ja fornecido no Models, mas se fornecidos, devem ser válidos.
+    
+    Exceptions:
+    - HTTPException 409-Conflict: Se o username, email ou matrícula do usuário já existir na base de dados.
+    - HTTPException 400-Bad Request: Se a imagem de perfil for fornecida e não for do tipo JPEG ou PNG.
+    - HTTP 422 Unprocessable Entity: Se o formulário for inválido.
+    - HTTP 500 Internal Server Error: Se houver algum erro interno no servidor.
     """
 
     if profileImage:
         if profileImage.content_type not in ["image/jpeg", "image/png"]:
-            raise HTTPException(detail="Formato de imagem inválido")
+            raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
         filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
         filepath = os.path.join("static/images/profiles/", filename)
         with open(filepath, "wb") as buffer:
@@ -105,25 +111,55 @@ async def create_user(form: UserSchemaCreateForm = Depends(),
             session.add(new_user)
             await session.commit()
             return new_user
-        except IntegrityError:
-            raise HTTPException(detail="Já existe um usuário com esse endereço de email ou matricula", status_code=status.HTTP_409_CONFLICT)
+        except IntegrityError as e:
+            error_Str = str(e).lower()
+            print(error_Str)
+            
+            if "(username)" in error_Str:
+                campo = "Nome de usuário"
+                
+            elif "(email)" in error_Str:
+                campo = "Endereço de email"
+                
+            elif "(enrollment)" in error_Str:
+                campo = "Matrícula"
+                
+            session.rollback()
+            raise HTTPException(detail=f"{campo} já cadastrado", status_code=status.HTTP_409_CONFLICT)
+        
+        except Exception as e:
+            session.rollback()
+            raise exception_not_identified(e)
         
 #GET All Users
 @router.get("/", response_model=List[UserSchemaBase])
 async def get_users( db: AsyncSession = Depends(get_session)):
+    """
+    Retorna todos os usuários cadastrados na base de dados. ou -> []
+    """
     async with db as session:
         users = await search_all_itens_in_db(Model=UserModel, db=db)
-        return users
+        try:
+            return users
+        except Exception as e:
+            raise exception_not_identified(e)
     
 #GET User By ID
 @router.get("/{user_id}", response_model=UserSchemaWithExtras, status_code=status.HTTP_200_OK)
 async def get_user(user_id: int, 
+                   expand: Optional[str] = None,
                    db: AsyncSession = Depends(get_session)):
+    if expand:
+        expand = expand.split(",")
+        
     async with db as session:
         user = await search_item_in_db(id=user_id, db=session, Model=UserModel)
         if not user:
             not_found()
-        return user
+            
+        
+        user_dict = user_expands(user=user, expand=expand)            
+        return user_dict
     
 #PUT User
 @router.put("/{user_id}", response_model=UserSchemaBase, status_code=status.HTTP_202_ACCEPTED)
@@ -149,7 +185,7 @@ async def put_user(user_id: int,
         
         if profileImage:
             if profileImage.content_type not in ["image/jpeg", "image/png"]:
-                raise HTTPException(detail="Formato de imagem inválido")
+                raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
             filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
             filepath = os.path.join("static/images/profiles/", filename)
             with open(filepath, "wb") as buffer:

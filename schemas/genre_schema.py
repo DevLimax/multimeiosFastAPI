@@ -18,4 +18,7 @@ class GenreSchemaBase(BaseModel):
 
 class GenreSchemaUpdate(GenreSchemaBase):
     name: Optional[str] = None
+    
+class GenreSchemaCreate(BaseModel):
+    name: str
 

@@ -15,7 +15,7 @@ from models.bookloan_model import Status as StatusLoan
 from schemas.loanRequest_schema import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
 
 from utils.search_in_db import *
-from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized, user_book_conflict
+from utils.exceptionsHttp import not_found, exception_not_identified, unauthorized, unauthenticated, user_book_conflict
 from utils.functions import validate_active_loans_limit
 
 from core.deps import get_session, get_current_user
@@ -43,36 +43,45 @@ async def get(request_id: int, db: AsyncSession = Depends(get_session)):
 @router.post("/", response_model=RequestLoanSchemaBase,status_code=status.HTTP_201_CREATED)
 async def post(request: RequestLoanSchemaCreate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
     if not current_user:
-        unauthorized()
-
+        unauthenticated()
+        
+    user = await search_item_in_db(id=current_user.id, db=db, Model=UserModel)
+    print("User", user)
+    validate_active_loans_limit(user=user)
+        
+    book = await search_item_in_db(id=request.book_id, db=db, Model=BookModel)
+    if not book or book.is_active == False:
+        not_found(variable=BookModel.__variable_name__)
+    
     new_request = LoanRequestModel(
        book_id = request.book_id,
        user_id = current_user.id
     ) 
 
     async with db as session:
-        user = await search_item_in_db(id=current_user.id, db=session, Model=UserModel)
-        validate_active_loans_limit(user=user)
-
         try:
             session.add(new_request)
             await session.commit()
             await session.refresh(new_request)
             return new_request
-        except IntegrityError:
+        except IntegrityError as e:
+            print(e)
             await session.rollback()
             user_book_conflict(tablename=LoanRequestModel.__tablename__)
 
 #PUT 
 @router.put("/{request_id}", response_model=RequestLoanSchemaUpdate, status_code=status.HTTP_202_ACCEPTED)
 async def update(request_id: int, request: RequestLoanSchemaUpdate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
-    if not current_user.is_admin:
-        unauthorized()
+    if current_user:
+        if not current_user.is_admin:
+            unauthorized()
+    else:
+        unauthenticated()
     
     async with db as session:
         request_db = await search_item_in_db(id=request_id, db=session, Model=LoanRequestModel)
         if not request_db:
-            not_found()
+            not_found(variable=LoanRequestModel.__variable_name__)
         
         for key, value in request.dict(exclude_unset=True).items():
             if value is not None:
@@ -133,8 +142,11 @@ async def update(request_id: int, request: RequestLoanSchemaUpdate, db: AsyncSes
 #DELETE
 @router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete(request_id: int, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
-    if not current_user.is_admin:
-       unauthorized()
+    if current_user:
+        if not current_user.is_admin:
+            unauthorized()
+    else:
+        unauthenticated()
     
     async with db as session:
         request = await search_item_in_db(id=request_id, db=db, Model=LoanRequestModel)

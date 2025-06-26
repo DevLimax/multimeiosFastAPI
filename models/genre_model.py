@@ -5,6 +5,8 @@ from .baseModel import Base
 
 class GenreModel(Base):
     __tablename__ = "generos"
+    
+    __variable_name__ = "Gênero"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(144), nullable=False, unique=True)

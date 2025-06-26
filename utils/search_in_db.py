@@ -1,10 +1,15 @@
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload, DeclarativeMeta
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.configs import settings
 from .exceptionsHttp import not_found 
 from fastapi import Response, status
+from typing import Optional, Type
 
-async def search_item_in_db(id: int, Model: settings.DBBASEMODEL, db: AsyncSession):
+async def search_item_in_db(id: int, 
+                            Model: Type[DeclarativeMeta], 
+                            db: AsyncSession, 
+):
     """
     Função para buscar um item no banco de dados pelo ID.
     """
@@ -21,6 +26,7 @@ async def search_all_itens_in_db(Model: settings.DBBASEMODEL, db: AsyncSession):
     result = await db.execute(query)
     list_itens = result.scalars().unique().all()
     return list_itens
+    
     
 
         

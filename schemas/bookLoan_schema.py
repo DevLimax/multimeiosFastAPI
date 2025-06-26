@@ -28,7 +28,7 @@ class BookLoanSchemaCreate(BookLoanSchemaBase):
     book_id: int
     user_id: int
     status: Optional[str] = None
-    book_code: Optional[str] = None
+    book_code: str
     loan_date: Optional[datetime] = None
     return_date: Optional[datetime] = None 
 

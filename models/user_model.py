@@ -5,9 +5,11 @@ from .baseModel import Base
 
 class UserModel(Base):
     __tablename__ = "usuarios"
+    
+    __variable_name__ = "Usuário"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(144), nullable=False)
+    username = Column(String(144), nullable=False, unique=True)
     first_name = Column(String(50), nullable=True)
     last_name = Column(String(50), nullable=True)
     enrollment = Column(Integer, nullable=True, unique=True)

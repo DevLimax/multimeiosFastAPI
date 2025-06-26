@@ -1,16 +1,19 @@
 from fastapi import HTTPException, status
 
-def exception_not_identified(error: Exception):
-    raise HTTPException(detail=f"Não foi possivel realizar a ação, error:{error}", status_code=status.HTTP_403_FORBIDDEN)
+def exception_not_identified(error: Exception) -> HTTPException:
+    raise HTTPException(detail=f"Não foi possivel identificar o erro:{error}", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-def not_found():
-    raise HTTPException(detail="Instancia não encontrada", status_code=status.HTTP_404_NOT_FOUND)
+def not_found(variable: str):
+    raise HTTPException(detail=f"{variable} não encontrado".capitalize(), status_code=status.HTTP_404_NOT_FOUND)
 
 def unauthorized():
     """
         Reutilização de codigo para usar nas validações de permissão do Usuário
     """
     raise HTTPException(detail="Usuario com permissões insuficientes para realizar essa ação!", status_code=status.HTTP_401_UNAUTHORIZED)
+
+def unauthenticated():
+    raise HTTPException(detail="Usuário não autenticado!", status_code=status.HTTP_401_UNAUTHORIZED)
 
 def user_book_conflict(tablename: str):
     """

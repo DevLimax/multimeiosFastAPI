@@ -6,6 +6,8 @@ from .baseModel import Base
 
 class BookModel(Base):
     __tablename__ = "livros"
+    
+    __variable_name__ = "Livro"
 
     id = Column(Integer, autoincrement=True, primary_key=True)
     title = Column(String(50), nullable=False, unique=True)
@@ -20,7 +22,6 @@ class BookModel(Base):
     __table_args__ = (
         UniqueConstraint("title","author", name="uq_title_author_books"),
     )
-    
 
 #Reations - One to Many
 from .bookloan_model import BookLoanModel
