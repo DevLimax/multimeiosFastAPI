@@ -1,0 +1,17 @@
+from typing import List, ClassVar
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    
+    ENV: str = "dev"
+    API_V1_STR: str = "/api/v1"
+    DB_URL: str = "sqlite+aiosqlite:///./multimeios.db"
+    
+    JWT_SECRET_KEY: str = "d6e86db996a6b8a8427402925eab49761e0b1f9a4f86372ebd179af78b764ec2"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRED: int = 60 * 24
+
+    class Config:
+        case_sensitive = True
+
+settings: Settings = Settings()
