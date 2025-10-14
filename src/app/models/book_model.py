@@ -22,5 +22,5 @@ class BookModel(SQLModel, table=True):
     
     genre: "GenreModel" = Relationship(back_populates="books")
     genre_two: "GenreModel" = Relationship(back_populates="books")
-    added_by: "UserModel" = Relationship(back_populates="books_added", cascade_delete=True)
+    added_by: "UserModel" = Relationship(back_populates="books_added")
     

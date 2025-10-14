@@ -10,7 +10,14 @@ class GenreModel(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, index=True)
     name: str = Field(nullable=False, max_length=144, unique=True)
     
-    books: List["BookModel"] = Relationship(back_populates=["genre", "genre_two"], cascade_delete=True)
+    books: List["BookModel"] = Relationship(back_populates="genre", cascade_delete=True)
+
+    def validate_data(self):
+        if isinstance(self.id, int) and self.id < 1:
+            raise ValueError("ID invalido!")
+
+        if self.name:
+            self.name = self.name.lower()
     
 
 class GenreSchemaBase(SQLModel, table=False):
