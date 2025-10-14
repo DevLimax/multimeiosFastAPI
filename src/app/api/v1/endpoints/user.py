@@ -64,6 +64,7 @@ async def create_user(
     try:
         db.add(new_user)
         await db.commit()
+        await db.refresh(new_user)
         return new_user
     
     except IntegrityError as e:
@@ -110,8 +111,7 @@ async def put_user(id: int,
                    db: AsyncSession = Depends(get_session), 
                    current_user: UserModel = Depends(get_current_user)
 ):
-    async with db as session:
-        user_db = await search_item_in_db(id=id, db=session, Model=UserModel)
+        user_db = await search_item_in_db(id=id, session=db, Model=UserModel)
 
         if not user_db:
             raise NotFoundException(id=id)
@@ -132,10 +132,27 @@ async def put_user(id: int,
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(profileImage.file, buffer)
             user_db.profile_image = filepath
+
+        try:
+            await db.commit()
+            await db.refresh(user_db)
+            return user_db
+        except IntegrityError as e:
+            await db.rollback()
+            e_str = str(e.orig).lower()
+            if "unique constraint" in str(e.orig).lower():
+                if "email" in e_str:
+                    raise HTTPException(detail=f"Já existe uma instancia com (email = {user.email})", status_code=status.HTTP_409_CONFLICT)
+                else:
+                    raise HTTPException(detail=f"Já existe uma instancia com (enrollment = {user.enrollment})", status_code=status.HTTP_409_CONFLICT)
+            else:
+                raise HTTPException(detail=f"Erro de integridade {e.orig}", status_code=status.HTTP_409_CONFLICT)
     
-        await session.commit()
-        await session.refresh(user_db)
-        return user_db
+        except Exception as e:
+            await db.rollback()
+            print(e)
+            raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
 #DELETE User
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -144,7 +161,7 @@ async def delete_user(id: int ,
                       current_user: UserModel = Depends(get_current_user)
 ):
     async with db as session:
-        user = await search_item_in_db(id=id, db=session, Model=UserModel)
+        user = await search_item_in_db(id=id, session=session, Model=UserModel)
         if not user:
             raise NotFoundException(id=id)
 

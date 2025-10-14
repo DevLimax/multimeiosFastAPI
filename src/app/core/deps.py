@@ -30,7 +30,7 @@ async def get_current_user(db: AsyncSession = Depends(get_session), token: str =
     try:
         payload = jwt.decode(
             token,
-            settings.JWT_SECRET,
+            settings.JWT_SECRET_KEY,
             algorithms=[settings.ALGORITHM],
             options={"Verify_aud": False}
         )

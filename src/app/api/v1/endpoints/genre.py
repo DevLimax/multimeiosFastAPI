@@ -1,64 +1,74 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, status
-from typing import List, Optional
+from typing import List, Optional, Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse, Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
-from app.models.genre_model import GenreModel, GenreSchemaBase, GenreSchemaUpdate
-from app.core.deps import get_session
+from app.models.user_model import UserModel
+from app.models.genre_model import GenreModel
+from app.schemas.serializers.genre_serializer import GenreSchemaBase, GenreSchemaUpdate, GenreSchemaCreate
+
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
+from app.utils.exceptions import NotFoundException, NotPermissionsException, UniqueViolationException, InternalServerException
 
-#Bypass warning SQLModel Select
-from sqlmodel.sql.expression import Select, SelectOfScalar
-
-SelectOfScalar.inherit_cache = True
-Select.inherit_cache = True
-#Bypass end
+from app.core.deps import get_session, get_current_user
 
 router = APIRouter()
 
+#GET All Genres
+@router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
+async def get(db: AsyncSession = Depends(get_session)):
+    async with db as session:
+        genres = await search_all_itens_in_db(session=session, Model=GenreModel)
+        return genres
+    
+#GET Genre by ID
+@router.get("/{id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
+async def get_genre(id: int, db: AsyncSession = Depends(get_session)):
+    async with db as session:
+        genre = await search_item_in_db(id=id, session=session, Model=GenreModel)
+        if not genre:
+            raise NotFoundException(id=id)
+        return genre
+
+#POST Genre
 @router.post("/", response_model=GenreSchemaBase, status_code=status.HTTP_201_CREATED)
-async def create_genre(
-    data: GenreSchemaBase,
-    db: AsyncSession = Depends(get_session)
+async def post_genre(data: GenreSchemaCreate,
+                     db: AsyncSession = Depends(get_session),
+                     current_user: UserModel = Depends(get_current_user)
 ):
-    
-    new_genre = GenreModel(**data.dict())
-    
+    if not current_user.is_admin:
+        raise NotPermissionsException()
+
+    new_genre = GenreModel(
+        name = data.name.title(),
+    )
+
     try:
-        new_genre.validate_data()
         db.add(new_genre)
         await db.commit()
         await db.refresh(new_genre)
         return new_genre
+    
+    except IntegrityError as e: 
+        await db.rollback()
+        raise UniqueViolationException(error=e)
+    
     except Exception as e:
         await db.rollback()
-        print(e)
-        raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-@router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
-async def get_genres(
-    db: AsyncSession = Depends(get_session)
+        raise InternalServerException()
+        
+#DELETE Genre
+@router.delete("/{genre_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_genre(genre_id: int,
+                       db: AsyncSession = Depends(get_session)
 ):
-    
-    genres: Optional[List[GenreModel]] = await search_all_itens_in_db(
-        session=db,
-        Model=GenreModel
-    )
-    return genres
-
-@router.get("/{id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
-async def get_genre(
-    id: int,
-    db: AsyncSession = Depends(get_session)
-):
-    
-    genre = await search_item_in_db(
-        id=id,
-        Model=GenreModel,
-        session=db
-    )
-
+    genre = await search_item_in_db(id=genre_id, session=db, Model=GenreModel)
     if not genre:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gênero não encontrado")
-    
-    return genre
+        raise NotFoundException(id=id)
+        
+    await db.delete(genre)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

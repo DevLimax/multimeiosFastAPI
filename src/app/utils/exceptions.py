@@ -7,6 +7,13 @@ class NotFoundException(HTTPException):
             detail=f"Item {id} não encontrado"
         )
 
+class NotPermissionsException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário não possui permissões suficientes para essa ação"
+        )
+
 class UniqueViolationException(HTTPException):
     def __init__(self, error: str):
         error_Str = str(error.orig).lower()
@@ -22,8 +29,15 @@ class UniqueViolationException(HTTPException):
                 print("valor:", value)
                 break
             
-            
         super().__init__(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Já existe um item com ({column} = {value})"
+            detail=f"Já existe uma instancia com ({column} = {value})"
         )
+    
+class InternalServerException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno do servidor durante operação"
+        )
+
