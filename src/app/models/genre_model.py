@@ -1,32 +1,28 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import List
-from typing import Optional
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.base_model import Base
 
-from app.models.base_model import BaseModel
-
-class GenreModel(SQLModel, table=True):
+class GenreModel(Base):
     __tablename__ = "generos"
     
-    id: Optional[int] = Field(primary_key=True, index=True)
-    name: str = Field(nullable=False, max_length=144, unique=True)
-    
-    books: List["BookModel"] = Relationship(back_populates="genre", cascade_delete=True)
+    __variable_name__ = "Gênero"
 
-    def validate_data(self):
-        if isinstance(self.id, int) and self.id < 1:
-            raise ValueError("ID invalido!")
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
+    name: Mapped[str] = mapped_column(nullable=False, unique=True)
 
-        if self.name:
-            self.name = self.name.lower()
-    
+#Relations - One To Many
+from .book_model import BookModel
+GenreModel.primary_books = relationship(
+    "BookModel",
+    cascade="all, delete-orphan",
+    foreign_keys="BookModel.genre_id",
+    back_populates="genre",
+    lazy="selectin"
+)
 
-class GenreSchemaBase(SQLModel, table=False):
-    
-    id: Optional[int] = None
-    name: str
-    
-class GenreSchemaUpdate(SQLModel, table=False):
-    
-    name: Optional[str]
-    
-    
+GenreModel.secondary_books = relationship(
+    "BookModel",
+    cascade="all, delete-orphan",
+    foreign_keys="BookModel.genre_two_id",
+    back_populates="genre_two",
+    lazy="selectin"
+)

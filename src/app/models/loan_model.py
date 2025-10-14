@@ -1,0 +1,47 @@
+from sqlalchemy import ForeignKey, Enum as EnumSQL, UniqueConstraint
+from enum import Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from datetime import datetime, timedelta
+from .base_model import Base
+
+class Status(str, Enum):
+    awaiting_withdrawal = "Aguardando retirada"
+    awaiting_return = "Aguardando devolução"
+    returned = "Devolvido"
+    returned_after_the_deadline = "Devolvido fora do prazo"
+    not_returned = "Não devolvido"
+    canceled = "Cancelado"
+    lost = "Perdido"
+
+    
+
+class LoanModel(Base):
+    __tablename__ = "emprestimos"
+    
+    __variable_name__ = "Emprestimo"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("livros.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
+    status: Mapped[Status] = mapped_column(EnumSQL(Status, name="status_emprestimos"), default=Status.awaiting_withdrawal, index=True)
+    unique_book_code_: Mapped[int] = mapped_column(nullable=False, index=True)
+    loan_date: Mapped[datetime] = mapped_column(nullable=True)
+    return_date: Mapped[datetime] = mapped_column(nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("book_id","user_id", name="uq_book_user_loans"),
+    )
+
+#Relations
+from .user_model import UserModel
+from .book_model import BookModel
+LoanModel.book = relationship(
+    "BookModel",
+    back_populates="loans",
+    lazy="joined"
+)
+LoanModel.user = relationship(
+    "UserModel",
+    back_populates="loans",
+    lazy="joined"
+)

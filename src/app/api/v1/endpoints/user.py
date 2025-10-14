@@ -1,62 +1,163 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, status
-from typing import List, Optional
+from typing import List, Optional, Any, Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.responses import JSONResponse, Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import IntegrityError
 
-from app.models.user_model import UserModel, UserSchemaBase, UserSchemaCreate, UserSchemaUpdate
-from app.core.deps import get_session
+from app.models.user_model import UserModel
+from app.models.loan_model import Status
+from app.schemas.serializers.user_serializers import UserSchemaBase, UserSchemaWithExtras, UserSchemaCreateForm, UserSchemaUpdateForm
+
+from app.core.deps import get_session, get_current_user
+from app.core.security import generate_hashed_password
+
 from app.utils.querys_db import search_item_in_db, search_all_itens_in_db
+from app.utils.exceptions import UniqueViolationException, NotFoundException
 
-#Bypass warning SQLModel Select
-from sqlmodel.sql.expression import Select, SelectOfScalar
-
-SelectOfScalar.inherit_cache = True
-Select.inherit_cache = True
-#Bypass end
+from datetime import datetime
+import os
+import shutil
+import uuid
 
 router = APIRouter()
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserSchemaBase)
+#POST User
+@router.post(
+    "/", 
+    response_model=UserSchemaBase, 
+    status_code=status.HTTP_201_CREATED
+)
 async def create_user(
-    user: UserSchemaCreate, 
-    db:AsyncSession = Depends(get_session)
-) -> UserModel:
+    form: UserSchemaCreateForm = Depends(),
+    profileImage: Optional[UploadFile] = File(None),
+    db: AsyncSession = Depends(get_session)
+):  
+
+    if profileImage:
+        try:
+            if profileImage.content_type not in ["image/jpeg", "image/png"]:
+                raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
+            filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
+            filepath = os.path.join("src/app/static/images/profiles/", filename)
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(profileImage.file, buffer)
+        except Exception as e:
+            print(e)
+            raise HTTPException(detail="Erro ao salvar imagem", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        filepath = "src/app/static/images/profiles/defaultProfile.png"
+
     
-    new_user = UserModel(**user.dict())
-    
+    new_user = UserModel(
+        first_name = form.first_name,
+        last_name = form.last_name,
+        enrollment = form.enrollment,
+        email = form.email,
+        password = generate_hashed_password(form.password),
+        is_admin = form.is_admin,
+        profile_image = filepath
+    )
     try:
-        new_user.validate_date()
         db.add(new_user)
         await db.commit()
-        await db.refresh(new_user)
         return new_user
+    
+    except IntegrityError as e:
+        await db.rollback()
+        if "unique constraint" in str(e.orig).lower():
+            raise UniqueViolationException(error=e)
+        else:
+            raise HTTPException(detail="Erro de integridade", status_code=status.HTTP_409_CONFLICT)
+    
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-@router.get("/", response_model=List[UserSchemaBase], status_code=status.HTTP_200_OK)
-async def get_users(
-    db: AsyncSession = Depends(get_session),
-    first_name: Optional[str] = Query(default=None, description="Filtro pelo primeiro nome do Usuário")
-):
-    users: Optional[List[UserModel]] = await search_all_itens_in_db(
-        Model=UserModel, 
-        session=db
-    )
-    return users
-
-@router.get("/{id}", response_model=UserSchemaBase, status_code=status.HTTP_200_OK)
-async def get_user(
-    id: int,
-    db: AsyncSession = Depends(get_session),
-):
-    user: Optional[UserModel] = await search_item_in_db(
-        id=id,
-        Model=UserModel,
-        session=db
-    )
+        await db.rollback()
+        raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário nao encontrado")
+#GET All Users
+@router.get("/", response_model=List[UserSchemaBase])
+async def get_users( db: AsyncSession = Depends(get_session)):
+    """
+    Retorna todos os usuários cadastrados na base de dados. ou -> []
+    """
+    async with db as session:
+        users = await search_all_itens_in_db(Model=UserModel, session=db)
+        try:
+            return users
+        except Exception as e:
+            raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    return user
+#GET User By ID
+@router.get("/{id}", response_model=UserSchemaWithExtras, status_code=status.HTTP_200_OK)
+async def get_user(id: int, 
+                   db: AsyncSession = Depends(get_session)):
+        
+    async with db as session:
+        user = await search_item_in_db(id=id, session=session, Model=UserModel)
+        if not user:
+            raise NotFoundException(id=id)
+                      
+        return user
+    
+#PUT User
+@router.put("/{id}", response_model=UserSchemaBase, status_code=status.HTTP_202_ACCEPTED)
+async def put_user(id: int,
+                   user: UserSchemaUpdateForm = Depends(),
+                   profileImage: Optional[UploadFile] = File(None),
+                   db: AsyncSession = Depends(get_session), 
+                   current_user: UserModel = Depends(get_current_user)
+):
+    async with db as session:
+        user_db = await search_item_in_db(id=id, db=session, Model=UserModel)
+
+        if not user_db:
+            raise NotFoundException(id=id)
+        
+        if not current_user.is_admin and user_db.id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
+        
+        elif current_user.is_admin or user_db.id == current_user.id:
+            for key, value in user.__dict__.items():
+                if value is not None:
+                    setattr(user_db, key, value)
+        
+        if profileImage:
+            if profileImage.content_type not in ["image/jpeg", "image/png"]:
+                raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
+            filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
+            filepath = os.path.join("static/images/profiles/", filename)
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(profileImage.file, buffer)
+            user_db.profile_image = filepath
+    
+        await session.commit()
+        await session.refresh(user_db)
+        return user_db
+    
+#DELETE User
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(id: int ,
+                      db: AsyncSession = Depends(get_session),
+                      current_user: UserModel = Depends(get_current_user)
+):
+    async with db as session:
+        user = await search_item_in_db(id=id, db=session, Model=UserModel)
+        if not user:
+            raise NotFoundException(id=id)
+
+        if not current_user.is_admin and user.id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
+        
+        elif current_user.is_admin or user.id == current_user.id:
+            try:
+                await session.delete(user)
+                await session.commit()
+                return Response(status_code=status.HTTP_204_NO_CONTENT)
+            except Exception as e:
+                await session.rollback()
+                raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    

@@ -12,7 +12,7 @@ from app.core.configs import settings
 from app.core.security import verify_password
 
 oauth2_schema = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/users/login"
+    tokenUrl=f"{settings.API_V1_STR}/auth/login"
 )
 
 async def authenticate(userInput: str, password: str, db: AsyncSession) -> Optional[UserModel]:
@@ -46,7 +46,7 @@ def create_token(type_token: str, timelife: timedelta, sub: str) -> str:
     payload["iat"] = datetime.now(tz=sp)
     payload["sub"] = str(sub)
 
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def create_access_token(sub: str) -> str:
     return create_token(

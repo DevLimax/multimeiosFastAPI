@@ -7,7 +7,7 @@ app = FastAPI(title="Multimeios API",
               version="1.0"
 )
 app.include_router(router, prefix=settings.API_V1_STR)
-#app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="src/app/static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
