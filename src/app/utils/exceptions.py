@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 
 class NotFoundException(HTTPException):
     def __init__(self, id: int):
@@ -15,8 +16,9 @@ class NotPermissionsException(HTTPException):
         )
 
 class UniqueViolationException(HTTPException):
-    def __init__(self, error: str):
+    def __init__(self, error: IntegrityError):
         error_Str = str(error.orig).lower()
+        print(error_Str)
         columns = error.statement.split("(",maxsplit=1)[1].split(")")[0].split(",")
         for i, v in enumerate(columns):
             columns[i] = v.strip(" ")

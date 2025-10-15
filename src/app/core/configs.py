@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     
     ENV: str = "dev"
     API_V1_STR: str = "/api/v1"
-    DB_URL: str = "sqlite+aiosqlite:///./multimeios.db"
+    DB_URL: str = "postgresql+asyncpg://lima:postgres@localhost:5432/multimeios"
     DBBASEMODEL: ClassVar = declarative_base()
     
     JWT_SECRET_KEY: str = "d6e86db996a6b8a8427402925eab49761e0b1f9a4f86372ebd179af78b764ec2"

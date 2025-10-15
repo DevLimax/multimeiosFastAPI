@@ -5,7 +5,6 @@ from app.core.configs import settings
 
 engine: AsyncEngine = create_async_engine(
     settings.DB_URL,
-    connect_args={"check_same_thread": False} 
 )
 
 Session: AsyncSession = sessionmaker(
