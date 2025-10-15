@@ -21,7 +21,9 @@ class RequestLoanSchemaBase(BaseModel):
 
 class RequestLoanSchemaUpdate(RequestLoanSchemaBase):
     book_id: Optional[int] = None
-    book_code: Optional[str] = None
+    unique_book_code: Optional[str] = None
 
 class RequestLoanSchemaCreate(RequestLoanSchemaBase):
+    user_id: Optional[int] = None
     book_id: int
+    status: Optional[Status] = None

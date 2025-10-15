@@ -2,10 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
 class NotFoundException(HTTPException):
-    def __init__(self, id: int):
+    def __init__(self, id: int, tablename: str):
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Item {id} não encontrado"
+            detail=f"Instancia de {tablename} com (id={id}) não encontrada!"
         )
 
 class NotPermissionsException(HTTPException):

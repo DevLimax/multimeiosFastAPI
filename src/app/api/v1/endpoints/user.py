@@ -69,10 +69,10 @@ async def create_user(
     
     except IntegrityError as e:
         await db.rollback()
-        if "unique constraint" in str(e.orig).lower():
+        if "uniqueviolation" in str(e.orig).lower():
             raise UniqueViolationException(error=e)
         else:
-            raise HTTPException(detail="Erro de integridade", status_code=status.HTTP_409_CONFLICT)
+            raise HTTPException(detail=f"Erro de integridade: {e.orig}", status_code=status.HTTP_409_CONFLICT)
     
     except Exception as e:
         await db.rollback()

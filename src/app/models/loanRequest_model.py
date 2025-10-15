@@ -15,7 +15,7 @@ class Status(str, Enum):
 class LoanRequestModel(Base):
     __tablename__ = "solicitacoes_emprestimos"
     __table_args__ = (
-        UniqueConstraint("book_id","user_id", name="uq_book_user_requests"),
+        UniqueConstraint("book_id", "user_id", "is_active", name="uq_book_user_active"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)

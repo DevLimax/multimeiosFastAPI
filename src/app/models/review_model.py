@@ -5,9 +5,6 @@ from .base_model import Base
 
 class BookReview(Base):
     __tablename__ = "avaliacoes"
-    __table_args__ = (
-        UniqueConstraint("book_id", "user_id", name="uq_book_user_reviews"),
-    )
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
     book_id: Mapped[int] = mapped_column(ForeignKey("livros.id"), nullable=False, index=True) 

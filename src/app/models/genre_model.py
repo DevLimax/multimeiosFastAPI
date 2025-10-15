@@ -3,8 +3,6 @@ from app.models.base_model import Base
 
 class GenreModel(Base):
     __tablename__ = "generos"
-    
-    __variable_name__ = "Gênero"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
     name: Mapped[str] = mapped_column(nullable=False, unique=True)

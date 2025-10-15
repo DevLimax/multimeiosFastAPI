@@ -1,11 +1,39 @@
 from typing import Optional, List, Annotated, Union
 from fastapi import Form
 from pydantic import BaseModel, EmailStr, field_serializer
-from .review_serializer import ReviewSchemaBase
-from .loan_serializer import BookLoanSchemaBase
-from .loanRequest_serializer import RequestLoanSchemaBase
 from datetime import datetime
 
+class _BookToUserSchemas(BaseModel):
+    id: int
+    title: str
+    author: str
+    cover: str
+class _ReviewSchemaToUser(BaseModel):
+    id: int
+    book: _BookToUserSchemas
+    comment: Optional[str] = None
+    rating: float   
+    created_at: datetime
+
+class _LoanSchemaToUser(BaseModel):
+    id: int
+    book: _BookToUserSchemas
+    status: str
+    unique_book_code_: Optional[int] = None
+    loan_date: Optional[datetime] = None 
+    return_date: Optional[datetime] = None 
+    updated_at: Optional[datetime] = None 
+    is_active: Optional[bool] = None
+    
+class _RequestLoanSchemaToUser(BaseModel):
+    id: int
+    book: _BookToUserSchemas
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+
+#=======================================================
 class UserSchemaBase(BaseModel):
     id: Optional[int] = None
     is_admin: bool
@@ -28,9 +56,9 @@ class UserSchemaBase(BaseModel):
         from_attributes = True
 
 class UserSchemaWithExtras(UserSchemaBase):
-    reviews: Optional[List[ReviewSchemaBase]] = None
-    loans: Optional[List[BookLoanSchemaBase]] = None
-    requestLoans: Optional[List[RequestLoanSchemaBase]] = None
+    reviews: Optional[List[_ReviewSchemaToUser]] = None
+    loans: Optional[List[_LoanSchemaToUser]] = None
+    requestLoans: Optional[List[_RequestLoanSchemaToUser]] = None
 
 class UserSchemaCreateForm:
     def __init__(

@@ -6,7 +6,16 @@ from pydantic import BaseModel, EmailStr
 from typing_extensions import Annotated, Doc
 from datetime import datetime
 from .review_serializer import ReviewSchemaBase
+from .genre_serializer import GenreSchemaBase
 
+class ReviewToBookSchema(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    comment: Optional[str] = None
+    rating: int
+    created_at: datetime
+
+#=======================================
 class BookSchemaBase(BaseModel):
     id: Optional[int] = None
     added_by_id: Optional[int] = None
@@ -14,24 +23,18 @@ class BookSchemaBase(BaseModel):
     author: str
     synopsis: Optional[str] = None
     cover: Optional[str] = None
-    genre_id: int
-    genre_two_id: Optional[int] = None
+    genre: GenreSchemaBase
+    genre_two: Optional[GenreSchemaBase] = None
     quantity: int
     is_active: bool
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer("created_at", "updated_at", when_used="always")
-    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
-        if value:
-            return value.strftime("%d/%m/%Y %H:%M")
-        return None
-
     class Config:
         from_attributes = True
 
 class BookSchemaReviews(BookSchemaBase):
-    reviews: Optional[List[ReviewSchemaBase]] = None
+    reviews: Optional[List[ReviewToBookSchema]] = None
 
     class Config:
         from_attributes = True

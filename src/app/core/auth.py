@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import EmailStr
 from sqlalchemy.future import select
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
 from app.models import UserModel
@@ -17,10 +17,16 @@ oauth2_schema = OAuth2PasswordBearer(
 
 async def authenticate(userInput: str, password: str, db: AsyncSession) -> Optional[UserModel]:
     async with db as session:
-        query = select(UserModel).filter(or_(
-            UserModel.email == userInput,
-            UserModel.enrollment == userInput
-        ))
+        try:
+            enrollment_value = int(userInput)
+            query = select(UserModel).filter(or_(
+                UserModel.email == userInput,
+                UserModel.enrollment == cast(enrollment_value, Integer)
+            ))
+        except ValueError:
+            query = select(UserModel).filter(or_(
+                UserModel.email == userInput
+            ))
         result = await session.execute(query)
         user: UserModel =  result.scalars().unique().one_or_none()
 

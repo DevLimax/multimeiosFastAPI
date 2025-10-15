@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse, Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, and_
 from sqlalchemy.exc import IntegrityError
 
 from app.models.user_model import UserModel
@@ -13,7 +12,7 @@ from app.models.book_model import BookModel
 from app.schemas.serializers.book_serializer import BookSchemaBase, BookSchemaReviews, BookSchemaUpdateForm, BookSchemaForm
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
-from app.utils.exceptions import UniqueViolationException, InternalServerException, NotFoundException, NotPermissionsException
+from app.utils.exceptions import InternalServerException, NotFoundException, NotPermissionsException
 
 from app.core.deps import get_session, get_current_user
 
@@ -114,7 +113,7 @@ async def create_book(
         
         except IntegrityError as e:
             await db.rollback()
-            if "unique constraint" in str(e.orig).lower():
+            if "uniqueviolation" in str(e.orig).lower():
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Já existe uma instancia com mesmo titulo: {new_book.title} e autor: {new_book.author}"
@@ -132,7 +131,7 @@ async def create_book(
 #PUT Book
 @router.put("/{book_id}", response_model=BookSchemaBase, status_code=status.HTTP_200_OK)
 async def update_book(book_id: int,
-                      book: BookSchemaUpdateForm = Depends(),
+                      data: BookSchemaUpdateForm = Depends(),
                       fileCover: Optional[UploadFile] = File(None),
                       db: AsyncSession = Depends(get_session),
                       current_user: UserModel = Depends(get_current_user)
@@ -141,12 +140,30 @@ async def update_book(book_id: int,
         raise NotPermissionsException()
         
     async with db as session:
-        book_db = await search_item_in_db(id=book_id, db=session, Model=BookModel)
+        book_db: BookModel = await search_item_in_db(id=book_id, session=session, Model=BookModel)
 
         if not book_db:
             raise NotFoundException(id)
         
-        for key, value in book.__dict__.items():
+        new_tiltle = data.title if data.title else book_db.title
+        new_author = data.author if data.author else book_db.author
+        
+        if new_tiltle == book_db.title or new_author == book_db.author:
+            collision_check_stmt = select(BookModel).where(
+                and_(
+                    BookModel.title == new_tiltle,
+                    BookModel.author == new_author,
+                    BookModel.id != book_db.id
+                )
+            )
+            collision_result = await session.execute(collision_check_stmt)
+            if collision_result.first():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Já existe uma instancia com mesmo titulo: {new_tiltle} e autor: {new_author}"
+                )
+        
+        for key, value in data.__dict__.items():
             if value is not None:
                 setattr(book_db, key, value)
         
@@ -158,7 +175,7 @@ async def update_book(book_id: int,
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(fileCover.file, buffer)
             book_db.cover = filepath
-
+        
         await session.commit()
         await session.refresh(book_db)
         return book_db
@@ -177,7 +194,7 @@ async def del_book(
         raise NotPermissionsException
 
     async with db as session:
-        book = await search_item_in_db(id=id, db=session, Model=BookModel)
+        book = await search_item_in_db(id=id, session=session, Model=BookModel)
 
         if not book:
             raise NotFoundException(id)

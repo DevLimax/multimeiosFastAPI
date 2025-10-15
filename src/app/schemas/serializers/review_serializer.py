@@ -10,12 +10,6 @@ class ReviewSchemaBase(BaseModel):
     rating: float
     created_at: datetime = None
 
-    @field_serializer("created_at", when_used="always")
-    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
-        if value:
-            return value.strftime("%d/%m/%Y %H:%M")
-        return None
-
     class Config:
         from_attributes = True
 
