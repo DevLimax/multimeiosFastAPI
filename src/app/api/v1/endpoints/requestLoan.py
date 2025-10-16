@@ -64,6 +64,7 @@ async def post(request: RequestLoanSchemaCreate, db: AsyncSession = Depends(get_
             return new_request
         except IntegrityError as e:
             await session.rollback()
+            print(e)
             raise HTTPException(
                 detail=f"Ja existe uma solicitação ativa desse usuario para o livro: {request.book_id}",
                 status_code=status.HTTP_409_CONFLICT
@@ -148,13 +149,17 @@ async def delete(id: int, db: AsyncSession = Depends(get_session), current_user:
 
 
     async with db as session:
-        request = await search_item_in_db(id=id, db=db, Model=LoanRequestModel)
+        request = await search_item_in_db(id=id, session=db, Model=LoanRequestModel)
         if not request:
             raise NotFoundException(tablename=LoanRequestModel.__tablename__, id=id)
 
-        session.delete(request)
-        session.commit()
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        try:
+            await session.delete(request)
+            await session.commit()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            await session.rollback()
+            raise InternalServerException()
             
 
 

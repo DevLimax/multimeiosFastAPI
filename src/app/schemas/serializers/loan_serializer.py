@@ -8,7 +8,7 @@ class BookLoanSchemaBase(BaseModel):
     book_id: int
     user_id: int
     status: str
-    book_code: Optional[str] = None
+    unique_book_code: Optional[int] = None
     loan_date: Optional[datetime] = None 
     return_date: Optional[datetime] = None 
     created_at: Optional[datetime] = None 
@@ -28,7 +28,7 @@ class BookLoanSchemaCreate(BookLoanSchemaBase):
     book_id: int
     user_id: int
     status: Optional[str] = None
-    book_code: str
+    unique_book_code: int
     loan_date: Optional[datetime] = None
     return_date: Optional[datetime] = None 
 
@@ -36,6 +36,6 @@ class BookLoanSchemaUpdate(BaseModel):
     book_id: Optional[int] = None
     user_id: Optional[int] = None
     status: Optional[Status] = None
-    book_code: Optional[str] = None
+    unique_book_code: Optional[int] = None
     loan_date: Optional[datetime] = None
     return_date: Optional[datetime] = None 
