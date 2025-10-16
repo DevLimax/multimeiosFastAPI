@@ -14,7 +14,7 @@ from app.models.loan_model import LoanModel, Status as StatusLoan
 from app.schemas.serializers.loanRequest_serializer import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
-from app.utils.exceptions import NotFoundException, NotPermissionsException, UniqueViolationException, InternalServerException
+from app.utils.exceptions import NotFoundException, NotPermissionsException, InternalServerException
 from app.utils.functions import validate_active_loans_limit
 
 from app.core.deps import get_session, get_current_user

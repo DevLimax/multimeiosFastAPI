@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Enum as EnumSQL, UniqueConstraint
+from sqlalchemy import ForeignKey, Enum as EnumSQL, UniqueConstraint, Index
 from enum import Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timedelta
@@ -18,7 +18,6 @@ class Status(str, Enum):
 class LoanModel(Base):
     __tablename__ = "emprestimos"
     
-    __variable_name__ = "Emprestimo"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
     book_id: Mapped[int] = mapped_column(ForeignKey("livros.id"), nullable=False, index=True)
@@ -27,9 +26,16 @@ class LoanModel(Base):
     unique_book_code_: Mapped[int] = mapped_column(nullable=False, index=True)
     loan_date: Mapped[datetime] = mapped_column(nullable=True)
     return_date: Mapped[datetime] = mapped_column(nullable=True)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     __table_args__ = (
-        UniqueConstraint("book_id","user_id", name="uq_book_user_loans"),
+        Index(
+            "uq_emprestimo_ativo",
+            user_id,
+            book_id,
+            unique = True,
+            postgresql_where=is_active.is_(True)
+        ),
     )
 
 #Relations
