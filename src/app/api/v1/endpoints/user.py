@@ -43,14 +43,14 @@ async def create_user(
             if profileImage.content_type not in ["image/jpeg", "image/png"]:
                 raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
             filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
-            filepath = os.path.join("src/app/static/images/profiles/", filename)
+            filepath = os.path.join("static/images/profiles/", filename)
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(profileImage.file, buffer)
         except Exception as e:
             print(e)
             raise HTTPException(detail="Erro ao salvar imagem", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        filepath = "src/app/static/images/profiles/defaultProfile.png"
+        filepath = "static/images/profiles/defaultProfile.png"
 
     
     new_user = UserModel(
@@ -140,7 +140,7 @@ async def put_user(id: int,
                 raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
             filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
             filepath = os.path.join("static/images/profiles/", filename)
-            with open(filepath, "wb") as buffer:
+            with open("src/app/"+filepath, "wb") as buffer:
                 shutil.copyfileobj(profileImage.file, buffer)
             user_db.profile_image = filepath
 
