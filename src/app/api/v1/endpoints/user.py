@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.user_model import UserModel
 from app.models.loan_model import Status
 from app.schemas.serializers.user_serializers import UserSchemaBase, UserSchemaWithExtras, UserSchemaCreateForm, UserSchemaUpdateForm
+from app.schemas.filters.user_filters import UserFilter
 
 from app.core.deps import get_session, get_current_user
 from app.core.security import generate_hashed_password
@@ -79,13 +80,23 @@ async def create_user(
         raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 #GET All Users
-@router.get("/", response_model=List[UserSchemaBase])
-async def get_users( db: AsyncSession = Depends(get_session)):
+@router.get(
+    "/", 
+    response_model=List[UserSchemaBase]
+)
+async def get_users(
+    db: AsyncSession = Depends(get_session),
+    filters: UserFilter = Depends(UserFilter)
+):
     """
     Retorna todos os usuários cadastrados na base de dados. ou -> []
     """
     async with db as session:
-        users = await search_all_itens_in_db(Model=UserModel, session=db)
+        users = await search_all_itens_in_db(
+            Model=UserModel, 
+            session=db,
+            filters=filters
+        )
         try:
             return users
         except Exception as e:

@@ -1,7 +1,6 @@
 
 from typing import Optional, List
-from pydantic import BaseModel, field_serializer
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict
 
 class BooktoGenreSchema(BaseModel):
     id: Optional[int] = None
@@ -14,8 +13,9 @@ class GenreSchemaBase(BaseModel):
     id: Optional[int] = None
     name: str
 
-    class config: 
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
         
 class GenreSchemaWithRelations(GenreSchemaBase):
     primary_books: Optional[List[BooktoGenreSchema]] = None

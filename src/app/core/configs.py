@@ -1,10 +1,14 @@
 from typing import List, ClassVar
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
+import os
 
 class Settings(BaseSettings):
     
     ENV: str = "dev"
+    os.getenv("DB_URL", "postgresql+asyncpg://lima:postgres@localhost:5432/multimeios")
+    os.getenv("DB_TEST", "false" in ("true", "yes"))
     API_V1_STR: str = "/api/v1"
     DB_URL: str = "postgresql+asyncpg://lima:postgres@localhost:5432/multimeios"
     DBBASEMODEL: ClassVar = declarative_base()
@@ -13,7 +17,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRED: int = 60 * 24
 
-    class Config:
-        case_sensitive = True
+    model_config = ConfigDict(
+        case_sensitive = False
+    )
 
 settings: Settings = Settings()

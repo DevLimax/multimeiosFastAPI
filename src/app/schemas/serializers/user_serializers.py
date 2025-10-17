@@ -1,6 +1,6 @@
 from typing import Optional, List, Annotated, Union
 from fastapi import Form
-from pydantic import BaseModel, EmailStr, field_serializer
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 
 class _BookToUserSchemas(BaseModel):
@@ -47,13 +47,9 @@ class UserSchemaBase(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    @field_serializer("created_at", "updated_at", "last_login", when_used="always")
-    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
-        if value:
-            return value.strftime("%d/%m/%Y %H:%M")
-        return None
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class UserSchemaWithExtras(UserSchemaBase):
     reviews: Optional[List[_ReviewSchemaToUser]] = None

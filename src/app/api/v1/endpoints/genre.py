@@ -19,7 +19,11 @@ router = APIRouter()
 
 #GET All Genres
 @router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
-async def get(db: AsyncSession = Depends(get_session)):
+async def get(
+    db: AsyncSession = Depends(get_session),
+    name: Optional[str] = None
+):
+    
     async with db as session:
         genres = await search_all_itens_in_db(session=session, Model=GenreModel)
         return genres

@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.user_model import UserModel
 from app.models.book_model import BookModel
 from app.schemas.serializers.book_serializer import BookSchemaBase, BookSchemaReviews, BookSchemaUpdateForm, BookSchemaForm
+from app.schemas.filters.book_filter import BookFilter
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
 from app.utils.exceptions import InternalServerException, NotFoundException, NotPermissionsException
@@ -24,9 +25,16 @@ router = APIRouter()
 
 #GET All Books
 @router.get("/", response_model=List[BookSchemaBase], status_code=status.HTTP_200_OK)
-async def get_books(db: AsyncSession = Depends(get_session)):
+async def get_books(
+    db: AsyncSession = Depends(get_session),
+    filters: BookFilter = Depends(BookFilter)
+):
     async with db as session:
-        books = await search_all_itens_in_db(session=session, Model=BookModel)
+        books = await search_all_itens_in_db(
+            session=session, 
+            Model=BookModel,
+            filters=filters
+        )
         return books
         
 #GET Book by ID

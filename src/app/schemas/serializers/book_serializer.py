@@ -1,8 +1,7 @@
 
 from typing import Optional, List, Union
 from fastapi import Form
-from pydantic import field_serializer
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing_extensions import Annotated, Doc
 from datetime import datetime
 from .review_serializer import ReviewSchemaBase
@@ -30,14 +29,16 @@ class BookSchemaBase(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class BookSchemaReviews(BookSchemaBase):
     reviews: Optional[List[ReviewToBookSchema]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class BookSchemaUpdateForm():
     def __init__(

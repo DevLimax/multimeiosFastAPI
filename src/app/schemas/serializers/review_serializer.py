@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, field_serializer
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 class ReviewSchemaBase(BaseModel):
@@ -10,8 +10,9 @@ class ReviewSchemaBase(BaseModel):
     rating: float
     created_at: datetime = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class ReviewSchemaUpdate(BaseModel):
     book: Optional[int] = None

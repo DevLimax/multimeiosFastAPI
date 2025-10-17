@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.models.loanRequest_model import Status
 
@@ -13,11 +13,9 @@ class RequestLoanSchemaBase(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    @field_serializer("created_at", "updated_at", when_used="always")
-    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
-        if value:
-            return value.strftime("%d/%m/%Y %H:%M")
-        return None
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class RequestLoanSchemaUpdate(RequestLoanSchemaBase):
     book_id: Optional[int] = None
