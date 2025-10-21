@@ -1,3 +1,4 @@
 migrations/
 alembic.ini
 alembic/
+.venv

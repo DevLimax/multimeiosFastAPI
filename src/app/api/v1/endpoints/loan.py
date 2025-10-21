@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.loan_model import LoanModel, Status as StatusLoan
 from app.models.book_model import BookModel
 from app.models.user_model import UserModel
-from app.schemas.serializers.loan_serializer import BookLoanSchemaBase, BookLoanSchemaUpdate, BookLoanSchemaCreate
+from app.schemas.serializers.bookLoan_serializer import BookLoanSchemaBase, BookLoanSchemaUpdate, BookLoanSchemaCreate
 
 from app.utils.exceptions import NotFoundException, NotPermissionsException, UniqueViolationException, InternalServerException
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
@@ -86,7 +86,7 @@ async def post(
             book_id = data.book_id,
             user_id = data.user_id,
             status = data.status,
-            book_code = data.book_code,
+            unique_book_code = data.unique_book_code,
             loan_date = data.date,
             return_date = data.return_date
         )
