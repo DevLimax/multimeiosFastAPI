@@ -7,7 +7,6 @@ from .review_serializer import ReviewSchemaBase
 
 class BookSchemaBase(BaseModel):
     id: Optional[int] = None
-    added_by: Optional[int] = None
     title: str
     author: str
     synopsis: Optional[str] = None

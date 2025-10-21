@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.user_model import UserModel
 from app.models.loan_model import Status
-from app.schemas.serializers.user_serializers import UserSchemaBase, UserSchemaWithExtras, UserSchemaCreateForm, UserSchemaUpdateForm
+from app.schemas.serializers.user_serializer import UserSchemaBase, UserSchemaWithExtras, UserSchemaCreateForm, UserSchemaUpdateForm
 from app.schemas.filters.user_filters import UserFilter
 
 from app.core.deps import get_session, get_current_user

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models import UserModel, BookModel
 from app.models.loanRequest_model import LoanRequestModel, Status as StatusLoanRequest
 from app.models.loan_model import LoanModel, Status as StatusLoan
-from app.schemas.serializers.loanRequest_serializer import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
+from app.schemas.serializers.request_serializer import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
 from app.utils.exceptions import NotFoundException, NotPermissionsException, InternalServerException

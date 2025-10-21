@@ -110,7 +110,7 @@ async def create_book(
             genre_two_id=form.genre_two,
             quantity=form.quantity,
             cover=filepath,
-            added_by_id=current_user.id
+            added_by_id=int(current_user.id)
         )
 
         try:

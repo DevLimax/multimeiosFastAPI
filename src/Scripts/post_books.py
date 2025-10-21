@@ -5,7 +5,7 @@ URL = "http://127.0.0.1:8000/api/v1/books/"
 filepath = "src/Scripts/CSVs/books.csv"
 token: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNzYwOTAwNTAzLCJpYXQiOjE3NjA4MTQxMDMsInN1YiI6IjEifQ.WsvYh7Mvc3yPwXHObl56vjdmDqGpWuRHnx6QWkE-_F4"
 
-def post_books_from_csv(csv_filepath: str, url: str):
+def post_books_from_csv(csv_filepath: str, url: str, token: str):
     with open(csv_filepath, 'r', encoding='utf-8') as file:
         reader = csv.DictReader(file)
 
@@ -22,5 +22,7 @@ def post_books_from_csv(csv_filepath: str, url: str):
             else:
                 print(f"Failed to create book {row['title']}. Status code: {response.status_code}, Response: {response.text}")
 
+    print("All books created successfully.")
+    
 if __name__ == "__main__":
     post_books_from_csv(filepath, URL)

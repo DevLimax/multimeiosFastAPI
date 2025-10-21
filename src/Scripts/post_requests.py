@@ -5,7 +5,7 @@ from app.core.db import Session
 from app.models import LoanRequestModel
 import asyncio
 
-filepath = 'src/Scripts/CSVs/requests.csv'
+filepath_base = 'src/Scripts/CSVs/requests.csv'
 
 async def post_requests_from_csv(filepath: str):
     with open(filepath, 'r', encoding='utf-8') as file:
@@ -26,6 +26,8 @@ async def post_requests_from_csv(filepath: str):
                 except Exception as e:
                     await session.rollback()
                     print(f"Error occurred: {e}")
+                    
+    print("All loan requests added successfully.")
 
 if __name__ == "__main__":
-    asyncio.run(post_requests_from_csv(filepath))
+    asyncio.run(post_requests_from_csv(filepath_base))

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.user_model import UserModel
 from app.models.genre_model import GenreModel
-from app.schemas.serializers.genre_serializer import GenreSchemaBase,  GenreSchemaCreate, GenreSchemaWithRelations
+from app.schemas.serializers.genre_serializer import GenreSchemaBase,  GenreSchemaCreate
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
 from app.utils.exceptions import NotFoundException, NotPermissionsException, UniqueViolationException, InternalServerException
@@ -29,7 +29,7 @@ async def get(
         return genres
     
 #GET Genre by ID
-@router.get("/{id}", response_model=GenreSchemaWithRelations, status_code=status.HTTP_200_OK)
+@router.get("/{id}", response_model=GenreSchemaBase, status_code=status.HTTP_200_OK)
 async def get_genre(id: int, db: AsyncSession = Depends(get_session)):
     async with db as session:
         genre = await search_item_in_db(id=id, session=session, Model=GenreModel)

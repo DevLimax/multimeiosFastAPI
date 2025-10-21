@@ -1,7 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from models.loanRequest_model import Status
+from app.models.loanRequest_model import Status
 
 class RequestLoanSchemaBase(BaseModel):
     id: Optional[int] = None
