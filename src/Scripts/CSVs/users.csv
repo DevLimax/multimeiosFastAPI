@@ -1,0 +1,20 @@
+first_name,last_name,email,enrollment,password,is_admin
+Jhon macallister,Laguesta,jhon@example.com,82918271,jhonteste,false
+Anna maria,silva abreu,mariabreu@example.com,28199201,annateste,false
+Rosangela santos,oliveira,rosangela@pr.edu.ce.gov.br,18229124,rosinha123,true
+Carlos eduardo,fernandes carvalho,carlos@example.com,27182718,carlosteste,true
+Mariana lima,rodrigues,marianalima@example.com,9876532,marianateste,false
+Pedro henrique,souza mendes,pedrohenrique@example.com,85678912,pedroteste,false
+Lucas almeida,ferreira,lucasalmeida@example.com,27182719,lucasteste,false
+Beatriz costa,barbosa,beatrizcosta@example.com,98765412,beatrizteste,false
+Juliana ribeiro,moreira,julianaribeiro@example.com,45678915,julianateste,false
+Marcos vinicius,rocha,marcosvinicius@example.com,27182711,marcosteste,true  
+Fernanda gomes,pires,fernadapires@sp.edu.gov.br,18201921,fernandateste,true
+Ana paula,silva,anapaula@example.com,82912271,anapaulateste,false
+Ricardo lima,souza,ricardolima@example.com,98715432,ricardoteste,false
+Julio cesar,alves,juliocesarlima@example.com,35678912,juliocesarteste,false
+Marcia henrique,fernandes,marciahenrique@example.com,27182712,marciahenriqueteste,false
+Sofia carvalho,rodrigues,sofiacarvalho@example.com,81729122,sofiacarvalhoteste,false
+Bruno santos,oliveira,brunosantos@example.com,45618912,brunosteste,false
+Camila ferreira,barbosa,camilaferreira@example.com,27182714,camilaferreirateste,false
+Rafael ribeiro,moreira,rafaelribeiro@example.com,91827192,rafaelribeiroteste,false

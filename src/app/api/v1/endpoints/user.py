@@ -110,7 +110,7 @@ async def get_user(id: int,
     async with db as session:
         user = await search_item_in_db(id=id, session=session, Model=UserModel)
         if not user:
-            raise NotFoundException(id=id)
+            raise NotFoundException(id=id, tablename=UserModel.__tablename__)
                       
         return user
     

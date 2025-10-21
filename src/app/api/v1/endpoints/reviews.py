@@ -11,6 +11,7 @@ from app.models.user_model import UserModel
 from app.models.book_model import BookModel
 from app.models.review_model import BookReview
 from app.schemas.serializers.review_serializer import ReviewSchemaBase, ReviewSchemaUpdate, ReviewSchemaCreate
+from app.schemas.filters.review_filter import ReviewFilter
 
 from app.core.deps import get_session, get_current_user
 from app.utils.querys_db import search_item_in_db, search_all_itens_in_db
@@ -19,10 +20,20 @@ from app.utils.exceptions import NotFoundException, UniqueViolationException, No
 router = APIRouter()
 
 #GET All Reviews
-@router.get("/", response_model=List[ReviewSchemaBase])
-async def get_reviews(db: AsyncSession = Depends(get_session)):
+@router.get(
+        "/", 
+        response_model=List[ReviewSchemaBase]
+)
+async def get_reviews(
+    db: AsyncSession = Depends(get_session),
+    filters: ReviewFilter = Depends(ReviewFilter)
+):
     async with db as session:
-        reviews = await search_all_itens_in_db(session=session, Model=BookReview)
+        reviews = await search_all_itens_in_db(
+            session=session, 
+            Model=BookReview, 
+            filters=filters
+        )
         return reviews
     
 #GET Review By ID

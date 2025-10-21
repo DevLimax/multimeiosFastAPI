@@ -109,14 +109,9 @@ async def update(id: int, request: RequestLoanSchemaUpdate, db: AsyncSession = D
                 Mas o Usuário-Admin (Professor) conseguirá criar um emprestimo manualmente pela API tambem utilizando os Usuários-Aluno e Livros Disponiveis,
                 e podendo personalizar tambem as datas de emprestimo e retorno.
             """
-            if not request.unique_book_code:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                    detail="Para aprovar uma solicitação de empréstimo, é necessário informar o código do livro.")
-            
             new_bookLoan = LoanModel(
                 book_id = request_db.book_id,
                 user_id = request_db.user_id,
-                unique_book_code_ = int(request.unique_book_code)
             )
             user = await search_item_in_db(id=new_bookLoan.user_id, session=session, Model=UserModel)
             validate_active_loans_limit(user=user)
