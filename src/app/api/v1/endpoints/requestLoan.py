@@ -12,9 +12,10 @@ from app.models import UserModel, BookModel
 from app.models.loanRequest_model import LoanRequestModel, Status as StatusLoanRequest
 from app.models.loan_model import LoanModel, Status as StatusLoan
 from app.schemas.serializers.request_serializer import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
+from app.schemas.filters.request_filter import RequestFilter
 
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
-from app.utils.exceptions import NotFoundException, NotPermissionsException, InternalServerException
+from app.utils.exceptions import NotFoundException, NotPermissionsException, InternalServerException, NotVerifiedException
 from app.utils.functions import validate_active_loans_limit
 
 from app.core.deps import get_session, get_current_user
@@ -23,9 +24,13 @@ router = APIRouter()
 
 #GET All Requests
 @router.get("/", response_model=List[RequestLoanSchemaBase])
-async def get_all(db: AsyncSession = Depends(get_session)):
+async def get_all(db: AsyncSession = Depends(get_session),
+                  filters: RequestFilter = Depends()):
+    
     async with db as session:
-        requests = await search_all_itens_in_db(session=session, Model=LoanRequestModel)
+        requests = await search_all_itens_in_db(session=session, 
+                                                Model=LoanRequestModel,
+                                                filters=filters)
         return requests
     
 #GET By ID

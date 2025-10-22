@@ -5,12 +5,12 @@ from .base_model import Base
 from enum import Enum
 
 class Status(str, Enum):
-    pending = "Pendente"
-    approved = "Aprovado"
-    denied_due_lack_stock = "Negado por falta de estoque"
-    denied_due_user_limit = "Negado por limite de empréstimos"
-    denied_due_user_fines = "Negado por multas pendentes"
-    denied = "Negado"
+    pending = "pendente"
+    approved = "aprovado"
+    denied_due_lack_stock = "negado por falta de estoque"
+    denied_due_user_limit = "negado por limite de empréstimos"
+    denied_due_user_fines = "negado por multas pendentes"
+    denied = "negado"
 
 class LoanRequestModel(Base):
     __tablename__ = "solicitacoes_emprestimos"

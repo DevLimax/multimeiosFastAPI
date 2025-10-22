@@ -6,6 +6,9 @@ from .bookLoan_serializer import BookLoanSchemaBase
 from .request_serializer import RequestLoanSchemaBase
 from datetime import datetime
 
+class VerifyCodeSchema(BaseModel):
+    code: str
+
 class UserSchemaBase(BaseModel):
     id: Optional[int] = None
     is_admin: bool

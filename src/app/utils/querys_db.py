@@ -51,7 +51,7 @@ async def search_all_itens_in_db(
             elif filters.min_rating:
                 query = query.where(Model.rating >= filters.min_rating)
 
-        if Model.__tablename__ == "emprestimos" or Model.__tablename__ == "solicitacoes" or Model.__tablename__ == "avaliacoes":
+        if Model.__tablename__ == "emprestimos" or Model.__tablename__ == "solicitacoes_emprestimos" or Model.__tablename__ == "avaliacoes":
             if filters.start_date or filters.end_date:
                 if filters.start_date and filters.end_date:
                     query = query.where(Model.created_at.between(filters.start_date, filters.end_date))
@@ -70,7 +70,7 @@ async def search_all_itens_in_db(
                 continue
             
             if column is not None:
-                if isinstance(value, str):
+                if isinstance(value, str) and atrr != "status":
                     query = query.where(column.ilike(f"%{value}%"))
                 else:
                     query = query.where(column == value)

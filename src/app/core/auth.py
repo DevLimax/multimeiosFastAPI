@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy import or_, cast, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt
+
 from app.models import UserModel
 from app.core.configs import settings
 from app.core.security import verify_password

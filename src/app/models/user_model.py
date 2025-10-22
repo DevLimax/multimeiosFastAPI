@@ -1,8 +1,9 @@
-from sqlalchemy import String, Boolean
+from sqlalchemy import DateTime
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.core.configs import settings
 from .base_model import Base
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from random import randint
 
 class UserModel(Base):
     __tablename__ = "usuarios"
@@ -18,9 +19,24 @@ class UserModel(Base):
     is_admin: Mapped[bool] = mapped_column(default=False)
     profile_image: Mapped[str] = mapped_column(default="static/images/profiles/defaultProfile.png")
     last_login: Mapped[datetime] = mapped_column(nullable=True)
+    
+    #Colunas utilizadas apenas para a verificação do Email
+    is_active: Mapped[bool] = mapped_column(default=False) # A coluna so irá ficar True quando o usuário confirmar o email
+    verification_code: Mapped[str] = mapped_column(nullable=True)
+    verification_code_expiration: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __str__(self):
         return self.username
+    
+    async def generate_verification_code(self):
+        self.verification_code = str(randint(100000, 999999))
+        self.verification_code_expiration = datetime.now(timezone.utc) + timedelta(minutes=5)
+        
+    def check_verification_code(self, code) -> bool:
+        if self.verification_code == code and self.verification_code_expiration > datetime.now(timezone.utc):
+            return True
+        
+        return False        
 
 #Relations - One to Many
 from .loan_model import LoanModel

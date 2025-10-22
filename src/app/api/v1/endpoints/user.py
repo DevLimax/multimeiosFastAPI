@@ -17,7 +17,8 @@ from app.core.deps import get_session, get_current_user
 from app.core.security import generate_hashed_password
 
 from app.utils.querys_db import search_item_in_db, search_all_itens_in_db
-from app.utils.exceptions import UniqueViolationException, NotFoundException
+from app.utils.exceptions import UniqueViolationException, NotFoundException, InternalServerException, NotPermissionsException
+from app.Emails.send_email import send_email_verification_code
 
 from datetime import datetime
 import os
@@ -26,49 +27,58 @@ import uuid
 
 router = APIRouter()
 
-#POST User
-@router.post(
-    "/", 
-    response_model=UserSchemaBase, 
-    status_code=status.HTTP_201_CREATED
+#Metodo POST para criar um usuário
+@router.post( "/", 
+            response_model=UserSchemaBase, 
+            status_code=status.HTTP_201_CREATED
 )
 async def create_user(
-    form: UserSchemaCreateForm = Depends(),
-    profileImage: Optional[UploadFile] = File(None),
-    db: AsyncSession = Depends(get_session)
-):  
-
+                form: UserSchemaCreateForm = Depends(),
+                profileImage: Optional[UploadFile] = File(None),
+                db: AsyncSession = Depends(get_session)
+) -> JSONResponse:  
+    
     if profileImage:
         try:
+            
             if profileImage.content_type not in ["image/jpeg", "image/png"]:
                 raise HTTPException(detail="Formato de imagem inválido", status_code=status.HTTP_400_BAD_REQUEST)
+            
             filename = f"{uuid.uuid4().hex}_{profileImage.filename}"
             filepath = os.path.join("static/images/profiles/", filename)
+            
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(profileImage.file, buffer)
+                
         except Exception as e:
-            print(e)
-            raise HTTPException(detail="Erro ao salvar imagem", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            raise HTTPException(detail=f"Erro ao salvar imagem - Details: {e}", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)  
     else:
         filepath = "static/images/profiles/defaultProfile.png"
 
+    new_user = UserModel(first_name = form.first_name,
+                        last_name = form.last_name,
+                        enrollment = form.enrollment,
+                        email = form.email,
+                        password = generate_hashed_password(form.password),
+                        is_admin = form.is_admin,
+                        profile_image = filepath)
     
-    new_user = UserModel(
-        first_name = form.first_name,
-        last_name = form.last_name,
-        enrollment = form.enrollment,
-        email = form.email,
-        password = generate_hashed_password(form.password),
-        is_admin = form.is_admin,
-        profile_image = filepath
-    )
+    new_user.generate_verification_code() #Gera o codigo de verificação
+    
     try:
         db.add(new_user)
         await db.commit()
         await db.refresh(new_user)
+        send_email_verification_code(receiver_email=new_user.email, 
+                                     code=new_user.verification_code, 
+                                     username=new_user.first_name)# -> Envia o email de verificação contendo o codigo gerado pela função acima!
         return new_user
     
     except IntegrityError as e:
+        """
+        Exceções do banco de dados geralmente caem no IntegrityError nesse endpoint o mais comum seria o de UniqueViolation,
+        pois o email precisa ser unico e o username também, por isso o tratamento de erro foi feito dessa maneira.
+        """
         await db.rollback()
         if "uniqueviolation" in str(e.orig).lower():
             raise UniqueViolationException(error=e)
@@ -77,58 +87,70 @@ async def create_user(
     
     except Exception as e:
         await db.rollback()
-        raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise HTTPException(detail=f"Erro interno do servidor: {e}", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-#GET All Users
-@router.get(
-    "/", 
-    response_model=List[UserSchemaBase]
+#Metodo GET para buscar todos os usuários - suporte a FILTROS
+@router.get("/", 
+            response_model=List[UserSchemaBase]
 )
 async def get_users(
     db: AsyncSession = Depends(get_session),
     filters: UserFilter = Depends(UserFilter)
-):
-    """
-    Retorna todos os usuários cadastrados na base de dados. ou -> []
-    """
+) -> List[UserSchemaBase]:
+    
     async with db as session:
-        users = await search_all_itens_in_db(
-            Model=UserModel, 
-            session=db,
-            filters=filters
-        )
+        users = await search_all_itens_in_db(Model=UserModel, 
+                                            session=session,
+                                            filters=filters)
+        
         try:
             return users
         except Exception as e:
-            raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            raise InternalServerException(error=e)
     
-#GET User By ID
-@router.get("/{id}", response_model=UserSchemaWithExtras, status_code=status.HTTP_200_OK)
+#Metodo GET para buscar um usuário
+@router.get("/{id}", 
+            response_model=UserSchemaWithExtras, 
+            status_code=status.HTTP_200_OK
+)
 async def get_user(id: int, 
-                   db: AsyncSession = Depends(get_session)):
+                   db: AsyncSession = Depends(get_session)
+) -> UserSchemaWithExtras:
         
     async with db as session:
-        user = await search_item_in_db(id=id, session=session, Model=UserModel)
+        user = await search_item_in_db(id=id, 
+                                       session=session, 
+                                       Model=UserModel)
+        
         if not user:
-            raise NotFoundException(id=id, tablename=UserModel.__tablename__)
-                      
+            raise NotFoundException(id=id, 
+                                    tablename=UserModel.__tablename__)                  
         return user
+  
     
-#PUT User
-@router.put("/{id}", response_model=UserSchemaBase, status_code=status.HTTP_202_ACCEPTED)
+#Metodo PUT para atualizar dados de um usuário
+@router.put("/{id}", 
+            response_model=UserSchemaBase, 
+            status_code=status.HTTP_202_ACCEPTED
+)
 async def put_user(id: int,
                    user: UserSchemaUpdateForm = Depends(),
                    profileImage: Optional[UploadFile] = File(None),
                    db: AsyncSession = Depends(get_session), 
                    current_user: UserModel = Depends(get_current_user)
-):
-        user_db = await search_item_in_db(id=id, session=db, Model=UserModel)
+) -> UserSchemaBase:
+    
+    async with db as session:
+        user_db = await search_item_in_db(id=id, 
+                                          session=session, 
+                                          Model=UserModel)
 
         if not user_db:
-            raise NotFoundException(id=id)
+            raise NotFoundException(id)
         
-        if not current_user.is_admin and user_db.id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
+         # Verifica se o usuário atual possui permissões admin ou se ele mesmo está atualizando seus dados
+        if not current_user.is_admin and user_db.id != current_user.id: 
+            raise NotPermissionsException()
         
         elif current_user.is_admin or user_db.id == current_user.id:
             for key, value in user.__dict__.items():

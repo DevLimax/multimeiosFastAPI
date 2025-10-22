@@ -14,6 +14,13 @@ class NotPermissionsException(HTTPException):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário não possui permissões suficientes para essa ação"
         )
+        
+class NotVerifiedException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário nao verificado!"
+        )
 
 class UniqueViolationException(HTTPException):
     def __init__(self, error: IntegrityError):
@@ -37,9 +44,9 @@ class UniqueViolationException(HTTPException):
         )
     
 class InternalServerException(HTTPException):
-    def __init__(self):
+    def __init__(self, error):
         super().__init__(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno do servidor durante operação"
+            detail=f"Error interno do servidor durante operação: {error}"
         )
 

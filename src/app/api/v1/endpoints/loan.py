@@ -214,16 +214,22 @@ async def update(id: int, data: BookLoanSchemaUpdate, db: AsyncSession = Depends
                                                     Model=LoanModel
                                                 )
         if not instance: 
-            raise NotFoundException(tablename=LoanModel.__tablename__, id=id)
+            raise NotFoundException(tablename=LoanModel.__tablename__, 
+                                    id=id)
 
         if data.return_date and isinstance(data.return_date, str):
             try:
                 data.return_date = datetime.strptime(data.return_date, "%d/%m/%Y %H:%M")
             except ValueError:
-                raise HTTPException(status_code=400, detail="Formato inválido para a data. Use o formato: DD/MM/AAAA HH:MM")
+                raise HTTPException(status_code=400, 
+                                    detail="Formato inválido para a data. Use o formato: DD/MM/AAAA HH:MM")
 
         for key, value in data.dict(exclude_unset=True).items():
             setattr(instance, key, value)
+            
+        if data.status in [StatusLoan.awaiting_return] and not data.unique_book_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="O campo unique_book_code deve ser preenchido!")
 
         if data.status in [StatusLoan.returned, StatusLoan.returned_after_the_deadline]:
             instance.is_active = False

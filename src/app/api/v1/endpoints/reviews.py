@@ -15,8 +15,7 @@ from app.schemas.filters.review_filter import ReviewFilter
 
 from app.core.deps import get_session, get_current_user
 from app.utils.querys_db import search_item_in_db, search_all_itens_in_db
-from app.utils.exceptions import NotFoundException, UniqueViolationException, NotPermissionsException, InternalServerException
-
+from app.utils.exceptions import NotFoundException, UniqueViolationException, NotPermissionsException, InternalServerException, NotVerifiedException
 router = APIRouter()
 
 #GET All Reviews
@@ -53,6 +52,7 @@ async def create_review(data: ReviewSchemaCreate,
                         db: AsyncSession = Depends(get_session), 
                         current_user: UserModel = Depends(get_current_user)
 ):  
+    
     new_review = BookReview(**data.dict(exclude_unset=True), user_id=current_user.id)
 
     if new_review.rating > 5 or new_review.rating <= 0:

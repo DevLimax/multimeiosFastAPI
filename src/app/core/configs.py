@@ -20,5 +20,11 @@ class Settings(BaseSettings):
     model_config = ConfigDict(
         case_sensitive = False
     )
+    
+    #Configurações de E-mail
+    SENDER_EMAIL: str = "jpbarroslima12@gmail.com"
+    APP_PASSWORD: str = "eeyt rdai mbvd jpgb"
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
 
 settings: Settings = Settings()

@@ -5,13 +5,14 @@ from datetime import datetime, timedelta
 from .base_model import Base
 
 class Status(str, Enum):
-    awaiting_withdrawal = "Aguardando retirada"
-    awaiting_return = "Aguardando devolução"
-    returned = "Devolvido"
-    returned_after_the_deadline = "Devolvido fora do prazo"
-    not_returned = "Não devolvido"
-    canceled = "Cancelado"
-    lost = "Perdido"
+    awaiting_withdrawal = "aguardando retirada"
+    awaiting_return = "aguardando devolução"
+    returned = "devolvido"
+    returned_after_the_deadline = "devolvido fora do prazo"
+    not_returned_after_the_deadline = "não devolvido fora do prazo"
+    not_returned = "não devolvido"
+    canceled = "cancelado"
+    lost = "perdido"
 
     
 
@@ -23,7 +24,7 @@ class LoanModel(Base):
     book_id: Mapped[int] = mapped_column(ForeignKey("livros.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
     status: Mapped[Status] = mapped_column(EnumSQL(Status, name="status_emprestimos"), default=Status.awaiting_withdrawal, index=True)
-    unique_book_code_: Mapped[int] = mapped_column(nullable=False, index=True)
+    unique_book_code_: Mapped[int] = mapped_column(nullable=True, index=True)
     loan_date: Mapped[datetime] = mapped_column(nullable=True)
     return_date: Mapped[datetime] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)

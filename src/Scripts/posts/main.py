@@ -2,11 +2,11 @@ import asyncio
 from time import sleep
 
 
-from Scripts.post_users import post_users_from_csv
-from Scripts.post_genres import post_genres_from_csv
-from Scripts.post_books import post_books_from_csv
-from Scripts.post_requests import post_requests_from_csv
-from Scripts.post_reviews import post_reviews_from_csv
+from Scripts.posts.post_users import post_users_from_csv
+from Scripts.posts.post_genres import post_genres_from_csv
+from Scripts.posts.post_books import post_books_from_csv
+from Scripts.posts.post_requests import post_requests_from_csv
+from Scripts.posts.post_reviews import post_reviews_from_csv
 
 url_base = "http://127.0.0.1:8080/api/v1/"
 
