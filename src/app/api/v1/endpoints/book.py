@@ -55,7 +55,7 @@ async def get_book(
             Model=BookModel
         )
         if not book:
-            raise NotFoundException(id=id)
+            raise NotFoundException(id=id, tablename=BookModel.__tablename__)
 
         return book
     
