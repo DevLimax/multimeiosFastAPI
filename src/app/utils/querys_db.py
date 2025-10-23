@@ -3,7 +3,7 @@ from sqlalchemy.orm import joinedload, DeclarativeMeta
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.configs import settings
 from fastapi import Response, status
-from typing import Optional, Type
+from typing import Optional, Type, List
 
 async def search_item_in_db(id: int, 
                             Model: Type[DeclarativeMeta], 
@@ -21,7 +21,7 @@ async def search_all_itens_in_db(
     Model: Type[DeclarativeMeta], 
     session: AsyncSession,
     filters: Optional[dict] = None
-):
+) -> List[Type[DeclarativeMeta]]:
     """
     Função para buscar todos os itens de um modelo no banco de dados.
     """

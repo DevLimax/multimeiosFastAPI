@@ -20,8 +20,7 @@ router = APIRouter()
 #GET All Genres
 @router.get("/", response_model=List[GenreSchemaBase], status_code=status.HTTP_200_OK)
 async def get(
-    db: AsyncSession = Depends(get_session),
-    name: Optional[str] = None
+    db: AsyncSession = Depends(get_session)
 ):
     
     async with db as session:

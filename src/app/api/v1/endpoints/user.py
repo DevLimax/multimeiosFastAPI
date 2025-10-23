@@ -63,7 +63,7 @@ async def create_user(
                         is_admin = form.is_admin,
                         profile_image = filepath)
     
-    new_user.generate_verification_code() #Gera o codigo de verificação
+    await new_user.generate_verification_code() #Gera o codigo de verificação
     
     try:
         db.add(new_user)
