@@ -65,21 +65,19 @@ async def verify_code(data: VerifyCodeSchema,
         return JSONResponse(content={"message": "Usuário ja verificado!"}, status_code=status.HTTP_200_OK)
     
     if not user.verification_code or not user.verification_code_expiration:
-        return JSONResponse(content={"message": "Solicitar um novo código"}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={"message": "Solicitar a geracao de codigo"}, status_code=status.HTTP_403_FORBIDDEN)
     
     async with db as session:
         user_db: UserModel = await search_item_in_db(id=user.id, session=session, Model=UserModel)
         
-        if user_db.verification_code == data.code:
-            if user_db.verification_code_expiration < datetime.now(timezone.utc):
-                return JSONResponse(content={"message": "Código de verificação expirado"}, status_code=status.HTTP_400_BAD_REQUEST)
-                
+        if user_db.verification_code == data.code and user_db.verification_code_expiration < datetime.now(timezone.utc):
+            
             user_db.is_active = True
             user_db.verification_code = None
             user_db.verification_code_expiration = None
             await db.commit()
             await db.refresh(user_db)
-            return JSONResponse(content={"message": "Usuário verificado com sucesso!"}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"message": "Usuário verificado com sucesso!"}, status_code=status.HTTP_202_ACCEPTED)
         
         return JSONResponse(content={"message": "Código de verificação inválido"}, status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -89,7 +87,7 @@ async def resend_code(user: UserModel = Depends(get_current_user),
                       db: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
     if user.is_active:
-        return JSONResponse(content={"message": "Usuário ja verificado!"}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={"message": "Usuário ja verificado!"}, status_code=status.HTTP_409_CONFLICT)
     
     async with db as session:
         user_db = await search_item_in_db(id=user.id, session=session, Model=UserModel)
@@ -102,7 +100,7 @@ async def resend_code(user: UserModel = Depends(get_current_user),
                                          code=user_db.verification_code, 
                                          username=user.first_name)
             
-            return JSONResponse(content={"message": "Código de verificação reenviado com sucesso!"}, status_code=status.HTTP_200_OK)
+            return JSONResponse(content={"message": "Código de verificação reenviado com sucesso!"}, status_code=status.HTTP_201_CREATED)
         
         except Exception as e:
             await session.rollback()
