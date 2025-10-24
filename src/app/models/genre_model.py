@@ -1,11 +1,12 @@
+from sqlalchemy import BigInteger, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base_model import Base
 
 class GenreModel(Base):
     __tablename__ = "generos"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
-    name: Mapped[str] = mapped_column(nullable=False, unique=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    name: Mapped[str] = mapped_column(String(144), nullable=False, unique=True)
 
 #Relations - One To Many
 from .book_model import BookModel

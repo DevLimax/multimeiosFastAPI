@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base_model import Base
 
@@ -9,7 +9,7 @@ class BookModel(Base):
         UniqueConstraint("title","author", name="uq_title_author_books"),
     )
 
-    id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger ,autoincrement=True, primary_key=True)
     title: Mapped[str] = mapped_column(nullable=False, unique=True)
     author: Mapped[str] = mapped_column(nullable=False)
     synopsis: Mapped[str] = mapped_column(nullable=True)

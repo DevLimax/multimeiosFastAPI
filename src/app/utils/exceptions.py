@@ -50,3 +50,9 @@ class InternalServerException(HTTPException):
             detail=f"Error interno do servidor durante operação: {error}"
         )
 
+class UnprocessableEntityException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Servidor não conseguiu processar a requisição"
+        )

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Enum as EnumSQL, UniqueConstraint, Index
+from sqlalchemy import ForeignKey, Enum as EnumSQL, UniqueConstraint, Index, BigInteger, String
 from enum import Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timedelta
@@ -20,11 +20,11 @@ class LoanModel(Base):
     __tablename__ = "emprestimos"
     
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
-    book_id: Mapped[int] = mapped_column(ForeignKey("livros.id"), nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    book_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("livros.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger ,ForeignKey("usuarios.id"), nullable=False, index=True)
     status: Mapped[Status] = mapped_column(EnumSQL(Status, name="status_emprestimos"), default=Status.awaiting_withdrawal, index=True)
-    unique_book_code_: Mapped[int] = mapped_column(nullable=True, index=True)
+    unique_book_code_: Mapped[int] = mapped_column(String(144), nullable=True, index=True)
     loan_date: Mapped[datetime] = mapped_column(nullable=True)
     return_date: Mapped[datetime] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)

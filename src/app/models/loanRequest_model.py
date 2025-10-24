@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, UniqueConstraint, Enum as EnumSQL, Index
+from sqlalchemy import ForeignKey, UniqueConstraint, Enum as EnumSQL, Index, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from .base_model import Base
@@ -15,11 +15,11 @@ class Status(str, Enum):
 class LoanRequestModel(Base):
     __tablename__ = "solicitacoes_emprestimos"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
-    book_id = mapped_column(ForeignKey("livros.id"), nullable=False, index=True)
-    user_id = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    book_id = mapped_column(BigInteger, ForeignKey("livros.id"), nullable=False, index=True)
+    user_id = mapped_column(BigInteger, ForeignKey("usuarios.id"), nullable=False, index=True)
     status = mapped_column(EnumSQL(Status, name="status_solicitacoes"), default=Status.pending, index=True)
-    changer_by = mapped_column(ForeignKey("usuarios.id"), nullable=True, index=True)
+    changer_by = mapped_column(BigInteger, ForeignKey("usuarios.id"), nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     __table_args__ = (

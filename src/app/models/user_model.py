@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, BigInteger, String
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.core.configs import settings
 from .base_model import Base
@@ -10,14 +10,14 @@ class UserModel(Base):
     
     __variable_name__ = "Usuário"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
-    first_name: Mapped[str] = mapped_column(nullable=False)
-    last_name: Mapped[str] = mapped_column(nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    first_name: Mapped[str] = mapped_column(String(144), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(144), nullable=False)
     enrollment: Mapped[int] = mapped_column(nullable=True, unique=True, index=True)
-    email: Mapped[str] = mapped_column(nullable=False, unique=True, index=True)
-    password: Mapped[str] = mapped_column(nullable=False)
+    email: Mapped[str] = mapped_column(String(200) ,nullable=False, unique=True, index=True)
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
-    profile_image: Mapped[str] = mapped_column(default="static/images/profiles/defaultProfile.png")
+    profile_image: Mapped[str] = mapped_column(String(250), default="static/images/profiles/defaultProfile.png")
     last_login: Mapped[datetime] = mapped_column(nullable=True)
     
     #Colunas utilizadas apenas para a verificação do Email

@@ -1,6 +1,8 @@
 from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload, DeclarativeMeta
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import DBAPIError, DataError as SQLDataError
+from asyncpg.exceptions import DataError
 from app.core.configs import settings
 from fastapi import Response, status
 from typing import Optional, Type, List
@@ -12,10 +14,14 @@ async def search_item_in_db(id: int,
     """
     Função para buscar um item no banco de dados pelo ID.
     """
-    query = select(Model).filter(Model.id == id )
-    result = await session.execute(query)
-    item = result.scalars().unique().one_or_none()
+    try:
+        query = select(Model).filter(Model.id == id)
+        result = await session.execute(query)
+        item = result.scalars().unique().one_or_none()
+    except DBAPIError:
+        raise 
     return item
+
 
 async def search_all_itens_in_db(
     Model: Type[DeclarativeMeta], 

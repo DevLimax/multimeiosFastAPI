@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 
 from app.models.user_model import UserModel
 from app.models.loan_model import Status
@@ -17,7 +17,7 @@ from app.core.deps import get_session, get_current_user
 from app.core.security import generate_hashed_password
 
 from app.utils.querys_db import search_item_in_db, search_all_itens_in_db
-from app.utils.exceptions import UniqueViolationException, NotFoundException, InternalServerException, NotPermissionsException
+from app.utils.exceptions import UniqueViolationException, NotFoundException, InternalServerException, NotPermissionsException, UnprocessableEntityException
 from app.Emails.send_email import send_email_verification_code
 
 from datetime import datetime
@@ -118,9 +118,12 @@ async def get_user(id: int,
 ) -> UserSchemaWithExtras:
         
     async with db as session:
-        user = await search_item_in_db(id=id, 
-                                       session=session, 
-                                       Model=UserModel)
+        try:
+            user = await search_item_in_db(id=id, 
+                                        session=session, 
+                                        Model=UserModel)
+        except Exception as e:
+            raise UnprocessableEntityException()
         
         if not user:
             raise NotFoundException(id=id, 
@@ -134,28 +137,30 @@ async def get_user(id: int,
             status_code=status.HTTP_202_ACCEPTED
 )
 async def put_user(id: int,
-                   user: UserSchemaUpdateForm = Depends(),
+                   data: UserSchemaUpdateForm = Depends(),
                    profileImage: Optional[UploadFile] = File(None),
                    db: AsyncSession = Depends(get_session), 
                    current_user: UserModel = Depends(get_current_user)
 ) -> UserSchemaBase:
     
     async with db as session:
-        user_db = await search_item_in_db(id=id, 
+        user_db: UserModel = await search_item_in_db(id=id, 
                                           session=session, 
                                           Model=UserModel)
-
+        
         if not user_db:
             raise NotFoundException(id)
         
-         # Verifica se o usuário atual possui permissões admin ou se ele mesmo está atualizando seus dados
-        if not current_user.is_admin and user_db.id != current_user.id: 
+        if not current_user.is_admin and id != current_user.id:
             raise NotPermissionsException()
         
-        elif current_user.is_admin or user_db.id == current_user.id:
-            for key, value in user.__dict__.items():
-                if value is not None:
-                    setattr(user_db, key, value)
+        for key, value in data.__dict__.items():
+            if value is not None:
+                
+                if key == "password": #-> Caso seja alterado a senha, esse if cuida de gerar um hash para a nova senha
+                    value = generate_hashed_password(value)
+                    
+                setattr(user_db, key, value)
         
         if profileImage:
             if profileImage.content_type not in ["image/jpeg", "image/png"]:
@@ -165,24 +170,24 @@ async def put_user(id: int,
             with open("src/app/"+filepath, "wb") as buffer:
                 shutil.copyfileobj(profileImage.file, buffer)
             user_db.profile_image = filepath
-
+            
         try:
-            await db.commit()
-            await db.refresh(user_db)
+            await session.commit()
+            await session.refresh(user_db)
             return user_db
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
             e_str = str(e.orig).lower()
-            if "unique constraint" in str(e.orig).lower():
+            if "uniqueviolation" in str(e.orig).lower():
                 if "email" in e_str:
-                    raise HTTPException(detail=f"Já existe uma instancia com (email = {user.email})", status_code=status.HTTP_409_CONFLICT)
+                    raise HTTPException(detail=f"Já existe uma instancia com (email = {data.email})", status_code=status.HTTP_409_CONFLICT)
                 else:
-                    raise HTTPException(detail=f"Já existe uma instancia com (enrollment = {user.enrollment})", status_code=status.HTTP_409_CONFLICT)
+                    raise HTTPException(detail=f"Já existe uma instancia com (enrollment = {data.enrollment})", status_code=status.HTTP_409_CONFLICT)
             else:
                 raise HTTPException(detail=f"Erro de integridade {e.orig}", status_code=status.HTTP_409_CONFLICT)
     
         except Exception as e:
-            await db.rollback()
+            await session.rollback()
             print(e)
             raise HTTPException(detail="Erro interno do servidor", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
