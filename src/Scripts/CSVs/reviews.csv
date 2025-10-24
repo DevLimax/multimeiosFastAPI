@@ -1,26 +1,26 @@
-user_id,book_id,comment,rating
-11,22,"Leitura eletrizante, o final me surpreendeu!",5
-17,34,"Achei um pouco lento no início, mas o drama é profundo.",3
-9,23,"Crônicas divertidas e muito pertinentes ao nosso caos.",4
-13,31,"Perfeito para ler em uma tarde descontraída, muitas risadas.",5
-18,28,"Aborda um tema importante com muita sensibilidade. Recomendo.",4
-38,27,"Excelente romance histórico! A pesquisa do autor é impressionante.",5
-20,35,"Fantasia épica! A mitologia brasileira brilha nesta obra.",5
-10,25,"Um olhar duro, mas necessário sobre a realidade da favela.",4
-14,26,"A aventura é linda, mas o ritmo me cansou um pouco.",3
-7,20,"Coração de Pedra e Barro é um título muito apropriado. Visceral!",5
-6,18,"Um livro maluco, como o título sugere. Bom para passar o tempo.",3
-39,24,"Minha filha amou a investigação. Ótimo infanto-juvenil.",4
-2,14,"História clássica, mas a edição poderia ser melhor.",1
-16,32,"Um thriller policial de prender a respiração até o final.",5
-40,29,"A forma em cordel é genial, valorizando a cultura nordestina.",5
-8,33,"Aventura infantil com folclore muito bem trabalhado!",4
-19,17,"Um épico! A complexidade dos personagens é o ponto alto.",3
-12,15,"Clássico delicioso de reler. Butller nunca decepciona.",4
-15,19,"A sinopse não faz justiça. Contos com um toque surreal incrível.",5
-21,38,"Sátira social cruel, mas muito inteligente sobre o futuro.",2
-37,30,"Ideia criativa, mas o romance não me convenceu muito.",3
-39,22,"Sombrio e tenso. O mistério na Bahia é de arrepiar.",5
-10,14,"Um bom livro de fantasia para o público jovem.",4
-14,28,"Diário forte sobre o feminismo, muito importante historicamente.",5
-18,31,"Simplesmente genial! Ri muito com os sla",2
+comment,rating
+"Leitura eletrizante, o final me surpreendeu!",5
+"Achei um pouco lento no início, mas o drama é profundo.",3
+"Crônicas divertidas e muito pertinentes ao nosso caos.",4
+"Perfeito para ler em uma tarde descontraída, muitas risadas.",5
+"Aborda um tema importante com muita sensibilidade. Recomendo.",4
+"Excelente romance histórico! A pesquisa do autor é impressionante.",5
+"Fantasia épica! A mitologia brasileira brilha nesta obra.",5
+"Um olhar duro, mas necessário sobre a realidade da favela.",4
+"A aventura é linda, mas o ritmo me cansou um pouco.",3
+"Coração de Pedra e Barro é um título muito apropriado. Visceral!",5
+"Um livro maluco, como o título sugere. Bom para passar o tempo.",3
+"Minha filha amou a investigação. Ótimo infanto-juvenil.",4
+"História clássica, mas a edição poderia ser melhor.",1
+"Um thriller policial de prender a respiração até o final.",5
+"A forma em cordel é genial, valorizando a cultura nordestina.",5
+"Aventura infantil com folclore muito bem trabalhado!",4
+"Um épico! A complexidade dos personagens é o ponto alto.",3
+"Clássico delicioso de reler. Butller nunca decepciona.",4
+"A sinopse não faz justiça. Contos com um toque surreal incrível.",5
+"Sátira social cruel, mas muito inteligente sobre o futuro.",2
+"Ideia criativa, mas o romance não me convenceu muito.",3
+"Sombrio e tenso. O mistério na Bahia é de arrepiar.",5
+"Um bom livro de fantasia para o público jovem.",4
+"Diário forte sobre o feminismo, muito importante historicamente.",5
+"Simplesmente genial! Ri muito com os sla",2

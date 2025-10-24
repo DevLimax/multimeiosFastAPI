@@ -1,28 +1,38 @@
-import requests
 import csv
 
-URL = "http://127.0.0.1:8000/api/v1/books/"
-filepath = "src/Scripts/CSVs/books.csv"
-token: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNzYwOTAwNTAzLCJpYXQiOjE3NjA4MTQxMDMsInN1YiI6IjEifQ.WsvYh7Mvc3yPwXHObl56vjdmDqGpWuRHnx6QWkE-_F4"
+from app.core.db import Session
+from app.models import BookModel
 
-def post_books_from_csv(csv_filepath: str, url: str, token: str):
+import asyncio
+
+filepath = "src/Scripts/CSVs/books.csv"
+
+async def post_books_from_csv(csv_filepath: str):
     with open(csv_filepath, 'r', encoding='utf-8') as file:
         reader = csv.DictReader(file)
 
         for row in reader:
-            if row['genre_two'].lower() == 'null' or row['genre_two'] == '':
-                row.pop('genre_two')
-            response = requests.post(
-                url,
-                data=row,
-                headers={"Authorization": f"Bearer {token}"}
-            ) 
-            if response.status_code == 201:
-                print(f"Book {row['title']} created successfully.")
-            else:
-                print(f"Failed to create book {row['title']}. Status code: {response.status_code}, Response: {response.text}")
+            async with Session() as session:
+                book: BookModel = BookModel(title=row['title'],
+                                            author=row['author'],
+                                            genre_id=int(row['genre_id']),
+                                            genre_two_id=int(row['genre_two_id']) if row['genre_two_id'] else None,
+                                            quantity=int(row['quantity']),
+                                            synopsis=row['synopsis'],
+                                            added_by_id=20)
+            
+            try:
+                session.add(book)
+                await session.commit()
+                await session.refresh(book)
+                print(f"User: {book.id}-{book.title} added successfully in db")
+                
+            except Exception as e:
+                
+                await session.rollback()
+                print(f"Error adding User:{book.title} - Detail: {e}")
 
     print("All books created successfully.")
     
 if __name__ == "__main__":
-    post_books_from_csv(filepath, URL)
+    asyncio.run(post_books_from_csv(csv_filepath=filepath))

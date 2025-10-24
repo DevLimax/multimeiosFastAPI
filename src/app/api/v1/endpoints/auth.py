@@ -65,15 +65,13 @@ async def verify_code(data: VerifyCodeSchema,
         return JSONResponse(content={"message": "Usuário ja verificado!"}, status_code=status.HTTP_200_OK)
     
     if not user.verification_code or not user.verification_code_expiration:
-        return JSONResponse(content={"message": "Solicitar um novo código"}, status_code=status.HTTP_400_BAD_REQUEST)
+        return JSONResponse(content={"message": "Solicitar a geracao de codigo"}, status_code=status.HTTP_403_FORBIDDEN)
     
     async with db as session:
         user_db: UserModel = await search_item_in_db(id=user.id, session=session, Model=UserModel)
         
-        if user_db.verification_code == data.code:
-            if user_db.verification_code_expiration < datetime.now(timezone.utc):
-                return JSONResponse(content={"message": "Código de verificação expirado"}, status_code=status.HTTP_408_REQUEST_TIMEOUT)
-                
+        if user_db.verification_code == data.code and user_db.verification_code_expiration < datetime.now(timezone.utc):
+            
             user_db.is_active = True
             user_db.verification_code = None
             user_db.verification_code_expiration = None

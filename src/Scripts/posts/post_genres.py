@@ -1,26 +1,31 @@
-import requests
 import csv
 
-URL = "http://127.0.0.1:8000/api/v1/genres/"
-filepath = "src/Scripts/CSVs/genres.csv"
-token: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNzYwOTAwNTAzLCJpYXQiOjE3NjA4MTQxMDMsInN1YiI6IjEifQ.WsvYh7Mvc3yPwXHObl56vjdmDqGpWuRHnx6QWkE-_F4"
+from app.core.db import Session
+from app.models import GenreModel
 
-def post_genres_from_csv(csv_filepath: str, url: str, token: str):
+import asyncio
+
+filepath = "src/Scripts/CSVs/genres.csv"
+
+async def post_genres_from_csv(csv_filepath: str):
     with open(csv_filepath, 'r', encoding='utf-8') as file:
         reader = csv.DictReader(file)
 
         for row in reader:
-            response = requests.post(
-               url,
-               json=row,
-                headers={"Authorization": f"Bearer {token}"}
-            ) 
-            if response.status_code == 201:
-                print(f"Genre {row['name']} created successfully.")
-            else:
-                print(f"Failed to create genre {row['name']}. Status code: {response.status_code}, Response: {response.text}")
+            async with Session() as session:
+                genre: GenreModel = GenreModel(name=row['name'])
+                
+                try:
+                    session.add(genre)
+                    await session.commit()
+                    await session.refresh(genre)
+                    print(f"Genre {genre.id} - {genre.name} added successfully!")
+                    
+                except Exception as e:
+                    await session.rollback()
+                    print(f"Error adding Genre:{genre.name} - Detail: {e}")
 
     print("All genres created successfully.")
         
 if __name__ == "__main__":
-    post_genres_from_csv(filepath, URL)
+    asyncio.run(post_genres_from_csv(csv_filepath=filepath))
