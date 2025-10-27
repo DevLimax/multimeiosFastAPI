@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
 from app.models import UserModel, BookModel
-from app.models.loanRequest_model import LoanRequestModel, Status as StatusLoanRequest
+from app.models.loanRequest_model import LoanRequestModel, Status as StatusLoanRequest, ReasonChoices
 from app.models.loan_model import LoanModel, Status as StatusLoan
 from app.schemas.serializers.request_serializer import RequestLoanSchemaBase, RequestLoanSchemaUpdate, RequestLoanSchemaCreate
 from app.schemas.filters.request_filter import RequestFilter
@@ -17,6 +17,7 @@ from app.schemas.filters.request_filter import RequestFilter
 from app.utils.querys_db import search_all_itens_in_db, search_item_in_db
 from app.utils.exceptions import NotFoundException, NotPermissionsException, InternalServerException, NotVerifiedException
 from app.utils.functions import validate_active_loans_limit
+from app.Emails.send_email import send_email_for_new_request, send_status_update_email
 
 from app.core.deps import get_session, get_current_user
 
@@ -66,6 +67,8 @@ async def post(request: RequestLoanSchemaCreate, db: AsyncSession = Depends(get_
             session.add(new_request)
             await session.commit()
             await session.refresh(new_request)
+            send_email_for_new_request(receiver_email=new_request.user.email,
+                                       request_data=new_request)
             return new_request
         except IntegrityError as e:
             await session.rollback()
@@ -80,63 +83,79 @@ async def post(request: RequestLoanSchemaCreate, db: AsyncSession = Depends(get_
 
 #PUT 
 @router.put("/{id}", response_model=RequestLoanSchemaUpdate, status_code=status.HTTP_202_ACCEPTED)
-async def update(id: int, request: RequestLoanSchemaUpdate, db: AsyncSession = Depends(get_session), current_user: UserModel = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise NotPermissionsException()
+async def update(id: int,
+                 data: RequestLoanSchemaUpdate, 
+                 db: AsyncSession = Depends(get_session), 
+                 current_user: UserModel = Depends(get_current_user)):
     
     async with db as session:
-        request_db = await search_item_in_db(id=id, session=session, Model=LoanRequestModel)
+        request_db: LoanRequestModel = await search_item_in_db(id=id, 
+                                                               session=session,
+                                                               Model=LoanRequestModel)
+        
         if not request_db:
             raise NotFoundException(tablename=LoanRequestModel.__tablename__, id=id)
         
-        for key, value in request.dict(exclude_unset=True).items():
+        if data.status == StatusLoanRequest.denied:
+            if not data.reason:
+                raise HTTPException(detail="Motivo de rejeição não informado!",
+                                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+            
+            elif request_db.reason == ReasonChoices.other and not data.other_reason:
+                raise HTTPException(detail="Motivo de rejeição 'outro' nao informado!",
+                                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+        
+        for key, value in data.dict(exclude_unset=True).items():
             if value is not None:
                 setattr(request_db, key, value)
 
         request_db.changer_by = current_user.id
-
-        if request_db.status == StatusLoanRequest.denied_due_lack_stock:
-            request_db.is_active = False
-
-        elif request_db.status == StatusLoanRequest.denied_due_user_limit:
-            request_db.is_active = False
         
-        elif request_db.status == StatusLoanRequest.denied:
-            request_db.is_active = False
+        try:
+            await session.commit()
+            await session.refresh(request_db)
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(detail=e, status_code=status.HTTP_403_FORBIDDEN)
+        
+        if request_db.status != StatusLoanRequest.pending:
+            if request_db.status == StatusLoanRequest.approved:
+          
+                new_bookLoan = LoanModel(
+                    book_id = request_db.book_id,
+                    user_id = request_db.user_id,
+                    request_id = request_db.id
+                )
+                user: UserModel = await search_item_in_db(id=new_bookLoan.user_id,
+                                            session=session, 
+                                            Model=UserModel)
+                validate_active_loans_limit(user=user)
 
-        await session.commit()
-        await session.refresh(request_db)
-
-        if request_db.status == StatusLoanRequest.approved:
-            """
-                Sempre que uma solicitação for aprovada, vai ser criado o emprestimo automaticamente, com status "Aguardando Retirada".
-
-                Mas o Usuário-Admin (Professor) conseguirá criar um emprestimo manualmente pela API tambem utilizando os Usuários-Aluno e Livros Disponiveis,
-                e podendo personalizar tambem as datas de emprestimo e retorno.
-            """
-            new_bookLoan = LoanModel(
-                book_id = request_db.book_id,
-                user_id = request_db.user_id,
-            )
-            user = await search_item_in_db(id=new_bookLoan.user_id, session=session, Model=UserModel)
-            validate_active_loans_limit(user=user)
-
-            book = await search_item_in_db(id=new_bookLoan.book_id, session=session, Model=BookModel)
-            if book.quantity <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                    detail=f"Esse livro de ID:{book.id} não está disponível para empréstimo. O mesmo se encontra com a quantidade de {book.quantity} unidades.")
+                book: BookModel = await search_item_in_db(id=new_bookLoan.book_id, 
+                                            session=session, 
+                                            Model=BookModel)
+                if book.quantity <= 0:
+                    await session.rollback()
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                                        detail=f"Esse livro de ID:{book.id} não está disponível para empréstimo. O mesmo se encontra com a quantidade de {book.quantity} unidades.")
+                
+                try:
+                    session.add(new_bookLoan)
+                    book.quantity -= 1
+                    await session.commit()
+                    await session.refresh(new_bookLoan)
+                except Exception as e:
+                    await session.rollback()
+                    raise HTTPException(detail=f"Houve um erro na criação do emprestimo após a aprovação: {e}", status_code=status.HTTP_403_FORBIDDEN)
             
-            try:
-                session.add(new_bookLoan)
-                book.quantity -= 1
+            elif request_db.status == StatusLoanRequest.denied:
+                request_db.is_active = False
                 await session.commit()
-                await session.refresh(book)
-                await session.refresh(new_bookLoan)
-                return Response(content=f"Solicitação aprovada, emprestimo de número ({new_bookLoan.id}) criado.", 
-                                status_code=status.HTTP_201_CREATED)
-            except Exception as e:
-                await session.rollback()
-                raise HTTPException(detail=f"Houve um erro na criação do emprestimo após a aprovação: {e}", status_code=status.HTTP_403_FORBIDDEN)
+                await session.refresh(request_db)
+                
+            send_status_update_email(receiver_email=request_db.user.email, 
+                                     request_data=request_db, 
+                                     loan_id=new_bookLoan.id if request_db.status == StatusLoanRequest.approved else None)      
             
         return request_db
 

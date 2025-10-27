@@ -14,13 +14,13 @@ class Status(str, Enum):
     canceled = "cancelado"
     lost = "perdido"
 
-    
 
 class LoanModel(Base):
     __tablename__ = "emprestimos"
     
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    request_id:Mapped[int] = mapped_column(BigInteger, ForeignKey("solicitacoes_emprestimos.id"),nullable=True, index=True)
     book_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("livros.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(BigInteger ,ForeignKey("usuarios.id"), nullable=False, index=True)
     status: Mapped[Status] = mapped_column(EnumSQL(Status, name="status_emprestimos"), default=Status.awaiting_withdrawal, index=True)
@@ -51,4 +51,9 @@ LoanModel.user = relationship(
     "UserModel",
     back_populates="loans",
     lazy="joined"
+)
+LoanModel.request = relationship(
+    "LoanRequestModel",
+    back_populates = "loan",
+    lazy = "joined"
 )
