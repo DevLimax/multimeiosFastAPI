@@ -13,7 +13,11 @@ def validate_active_loans_limit(user: UserModel):
     active_loans: int = 0
 
     for loan in user.loans:
-        if loan.status == StatusLoan.awaiting_return and loan.is_active or loan.status == StatusLoan.not_returned and loan.is_active:
+        if loan.status not in [StatusLoan.canceled, 
+                               StatusLoan.lost, 
+                               StatusLoan.returned, 
+                               StatusLoan.returned_after_the_deadlin] and loan.is_active:
+            
             active_loans += 1
 
     if active_loans > 2:

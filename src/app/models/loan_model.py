@@ -24,7 +24,7 @@ class LoanModel(Base):
     book_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("livros.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(BigInteger ,ForeignKey("usuarios.id"), nullable=False, index=True)
     status: Mapped[Status] = mapped_column(EnumSQL(Status, name="status_emprestimos"), default=Status.awaiting_withdrawal, index=True)
-    unique_book_code_: Mapped[int] = mapped_column(String(144), nullable=True, index=True)
+    unique_book_code_: Mapped[str] = mapped_column(String(144), nullable=True, index=True)
     loan_date: Mapped[datetime] = mapped_column(nullable=True)
     return_date: Mapped[datetime] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
