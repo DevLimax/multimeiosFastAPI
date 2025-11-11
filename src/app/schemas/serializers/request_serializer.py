@@ -1,13 +1,15 @@
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from app.models.loanRequest_model import Status
+from app.models.loanRequest_model import Status, ReasonChoices
 
 class RequestLoanSchemaBase(BaseModel):
     id: Optional[int] = None
     book_id: int
     user_id: Optional[int] = None
     status: Optional[Status] = None
+    reason: Optional[ReasonChoices] = None
+    other_reason: Optional[str] = None
     changer_by: Optional[int] = None
     is_active: Optional[bool] = None
     created_at: Optional[datetime] = None

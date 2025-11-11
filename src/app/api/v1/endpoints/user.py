@@ -4,8 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse, Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError, DBAPIError
 
 from app.models.user_model import UserModel
@@ -175,6 +173,7 @@ async def put_user(id: int,
             await session.commit()
             await session.refresh(user_db)
             return user_db
+        
         except IntegrityError as e:
             await session.rollback()
             e_str = str(e.orig).lower()
